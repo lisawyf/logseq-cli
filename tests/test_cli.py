@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from logseq_cli.cli.app import app
@@ -9,8 +10,12 @@ def test_graph_detect_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(app, ["graph", "detect", "--graph", str(fixture_graph), "--json"])
 
     assert result.exit_code == 0
-    assert '"ok": true' in result.stdout
-    assert str(fixture_graph.resolve()) in result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["command"] == "graph detect"
+    assert payload["graph_root"] == str(fixture_graph.resolve())
+    assert payload["warnings"] == []
+    assert payload["errors"] == []
 
 
 def test_graph_detect_quiet_suppresses_stdout(runner, fixture_graph: Path) -> None:
@@ -268,6 +273,22 @@ def test_journal_read_json(runner, fixture_graph: Path) -> None:
     assert "Prepare status update" in result.stdout
 
 
+def test_journal_read_invalid_date_has_stable_json_error(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["journal", "read", "--graph", str(fixture_graph), "--date", "2026-99-99", "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 2
+    assert payload["ok"] is False
+    assert payload["command"] == "journal read"
+    assert payload["graph_root"] == str(fixture_graph.resolve())
+    assert payload["data"] is None
+    assert payload["warnings"] == []
+    assert payload["errors"][0]["code"] == "INVALID_DATE"
+
+
 def test_journal_list_json(runner, tmp_path: Path) -> None:
     graph = tmp_path / "graph"
     (graph / "pages").mkdir(parents=True)
@@ -459,6 +480,22 @@ def test_search_text_json(runner, fixture_graph: Path) -> None:
     assert '"count":' in result.stdout
     assert '"title": "2026-03-29"' in result.stdout
     assert "deployment notes" in result.stdout
+
+
+def test_search_text_success_envelope_shape(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["search", "text", "OpenClaw", "--graph", str(fixture_graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["ok"] is True
+    assert payload["command"] == "search text"
+    assert payload["graph_root"] == str(fixture_graph.resolve())
+    assert isinstance(payload["data"]["hits"], list)
+    assert payload["warnings"] == []
+    assert payload["errors"] == []
 
 
 def test_search_links_json(runner, fixture_graph: Path) -> None:
@@ -675,6 +712,18 @@ def test_tasks_list_state_filter(runner, fixture_graph: Path) -> None:
     assert '"count": 1' in result.stdout
     assert '"state": "DOING"' in result.stdout
     assert '"state": "TODO"' not in result.stdout
+
+
+def test_tasks_list_journal_task_uses_iso_journal_title(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["tasks", "list", "--graph", str(fixture_graph), "--state", "todo", "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    titles = {task["title"] for task in payload["data"]["tasks"]}
+    assert "2026-03-29" in titles
 
 
 def test_journal_append_dry_run_does_not_write(runner, fixture_graph: Path) -> None:

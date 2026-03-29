@@ -19,17 +19,17 @@ def normalize_page_name(value: str) -> str:
 def build_document(path: Path, doc_type: str) -> Document:
     content = path.read_text(encoding="utf-8")
     title = extract_title(content, path)
-    journal_title = _journal_title_from_path(path) if doc_type == "journal" else None
+    journal_date = _journal_date_from_path(path) if doc_type == "journal" else None
     return Document(
         name=path.stem,
-        title=journal_title or title,
+        title=journal_date.isoformat() if journal_date else title,
         path=path.resolve(),
         doc_type=doc_type,
         format="org" if path.suffix.lower() == ".org" else "markdown",
         content=content,
         blocks=parse_blocks(content, path),
         is_journal=(doc_type == "journal"),
-        journal_date=None,
+        journal_date=journal_date,
     )
 
 
@@ -180,15 +180,7 @@ def resolve_page(graph: Graph, page_name: str) -> Document:
         content = path.read_text(encoding="utf-8")
         title = extract_title(content, path)
         if normalize_page_name(title) == normalized_query:
-            return Document(
-                name=path.stem,
-                title=title,
-                path=path.resolve(),
-                doc_type="page",
-                format="org" if path.suffix.lower() == ".org" else "markdown",
-                content=content,
-                blocks=parse_blocks(content, path),
-            )
+            return build_document(path, "page")
 
     raise LogseqCliError(
         code="PAGE_NOT_FOUND",
@@ -310,8 +302,8 @@ def _atomic_write(path: Path, content: str) -> None:
     temp_path.replace(path)
 
 
-def _journal_title_from_path(path: Path) -> str | None:
+def _journal_date_from_path(path: Path) -> date | None:
     try:
-        return date.fromisoformat(path.stem.replace("_", "-")).isoformat()
+        return date.fromisoformat(path.stem.replace("_", "-"))
     except ValueError:
         return None

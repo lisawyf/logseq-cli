@@ -343,6 +343,7 @@ Stable exit codes:
 
 - [CHANGELOG.md](/Users/yiyi/program/llm/logseq-cli/CHANGELOG.md)
 - [RELEASE.md](/Users/yiyi/program/llm/logseq-cli/RELEASE.md)
+- [knowledge-base.md](/Users/yiyi/program/llm/logseq-cli/docs/knowledge-base.md)
 
 ## Install Built Artifacts
 

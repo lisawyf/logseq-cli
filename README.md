@@ -71,6 +71,7 @@ Verify:
 ```bash
 logseq-cli --help
 pytest
+python3 -m build --sdist --wheel
 ```
 
 ## Usage
@@ -328,3 +329,8 @@ Stable exit codes:
 - Org-mode support is read-oriented and intentionally partial.
 - Search is lexical; there is no semantic search or date filtering.
 - Write support is still intentionally narrow: `page create`, `page append`, `page append-under`, and `journal append`.
+
+## Release Files
+
+- [CHANGELOG.md](/Users/yiyi/program/llm/logseq-cli/CHANGELOG.md)
+- [RELEASE.md](/Users/yiyi/program/llm/logseq-cli/RELEASE.md)

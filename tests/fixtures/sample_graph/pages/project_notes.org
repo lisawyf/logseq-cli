@@ -1,0 +1,3 @@
+* Project Notes
+** TODO Prepare retro summary :team:
+** DONE Close sprint board :ops:

@@ -19,6 +19,7 @@ TODO_STATES = {
 
 PAGE_REF_RE = re.compile(r"\[\[([^\]]+)\]\]")
 TAG_RE = re.compile(r"(?<!\w)#([A-Za-z0-9][\w/-]*)")
+ORG_TAGS_AT_END_RE = re.compile(r"(?:^|\s):([A-Za-z0-9_@#%/-]+(?::[A-Za-z0-9_@#%/-]+)*):\s*$")
 SCHEDULED_RE = re.compile(r"\bSCHEDULED:\s*[<\[]?(\d{4}-\d{2}-\d{2})")
 DEADLINE_RE = re.compile(r"\bDEADLINE:\s*[<\[]?(\d{4}-\d{2}-\d{2})")
 MD_BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)$")
@@ -159,7 +160,11 @@ def extract_title(content: str, file_path: Path) -> str:
 
 
 def extract_tags(text: str) -> list[str]:
-    return sorted({match.group(1) for match in TAG_RE.finditer(text)})
+    tags = {match.group(1) for match in TAG_RE.finditer(text)}
+    org_match = ORG_TAGS_AT_END_RE.search(text)
+    if org_match:
+        tags.update(chunk for chunk in org_match.group(1).split(":") if chunk)
+    return sorted(tags)
 
 
 def extract_page_refs(text: str) -> list[str]:

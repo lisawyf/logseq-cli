@@ -13,6 +13,13 @@ def test_graph_detect_json(runner, fixture_graph: Path) -> None:
     assert str(fixture_graph.resolve()) in result.stdout
 
 
+def test_graph_detect_quiet_suppresses_stdout(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(app, ["graph", "detect", "--graph", str(fixture_graph), "--quiet"])
+
+    assert result.exit_code == 0
+    assert result.stdout == ""
+
+
 def test_graph_detect_autodiscovery(runner, fixture_graph: Path, monkeypatch) -> None:
     monkeypatch.chdir(fixture_graph / "pages")
 
@@ -51,6 +58,16 @@ def test_page_read_resolves_by_heading_title(runner, fixture_graph: Path) -> Non
     assert result.exit_code == 0
     assert '"title": "Project Notes"' in result.stdout
     assert '"format": "org"' in result.stdout
+
+
+def test_page_read_quiet_suppresses_stdout(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["page", "read", "Project Notes", "--graph", str(fixture_graph), "--quiet"],
+    )
+
+    assert result.exit_code == 0
+    assert result.stdout == ""
 
 
 def test_page_create_json(runner, tmp_path: Path) -> None:
@@ -440,7 +457,44 @@ def test_search_text_json(runner, fixture_graph: Path) -> None:
     assert result.exit_code == 0
     assert '"query": "OpenClaw"' in result.stdout
     assert '"count":' in result.stdout
+    assert '"title": "2026-03-29"' in result.stdout
     assert "deployment notes" in result.stdout
+
+
+def test_search_links_json(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["search", "links", "Project Notes", "--graph", str(fixture_graph), "--json"],
+    )
+
+    assert result.exit_code == 0
+    assert '"command": "search links"' in result.stdout
+    assert '"count": 1' in result.stdout
+    assert '"matched_refs": [' in result.stdout
+    assert '"Project Notes"' in result.stdout
+
+
+def test_search_links_quiet_suppresses_stdout(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["search", "links", "Project Notes", "--graph", str(fixture_graph), "--quiet"],
+    )
+
+    assert result.exit_code == 0
+    assert result.stdout == ""
+
+
+def test_search_tags_json(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["search", "tags", "ops", "--graph", str(fixture_graph), "--json"],
+    )
+
+    assert result.exit_code == 0
+    assert '"command": "search tags"' in result.stdout
+    assert '"count": 3' in result.stdout
+    assert '"matched_tags": [' in result.stdout
+    assert '"ops"' in result.stdout
 
 
 def test_links_backlinks_json(runner, fixture_graph: Path) -> None:
@@ -494,6 +548,34 @@ def test_capture_quick_json(runner, tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert '"command": "capture quick"' in result.stdout
     assert journal_path.read_text(encoding="utf-8") == "- Captured item\n"
+
+
+def test_capture_quick_quiet_still_writes(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "capture",
+            "quick",
+            "--graph",
+            str(graph),
+            "--date",
+            "2026-04-01",
+            "--text",
+            "Captured quietly",
+            "--quiet",
+        ],
+    )
+
+    journal_path = graph / "journals" / "2026_04_01.md"
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    assert journal_path.read_text(encoding="utf-8") == "- Captured quietly\n"
 
 
 def test_capture_project_appends_to_existing_page(runner, tmp_path: Path) -> None:

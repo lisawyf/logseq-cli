@@ -11,7 +11,7 @@ from logseq_cli.core.graph import resolve_graph
 from logseq_cli.core.journals import append_to_journal, ensure_journal, list_journals, parse_target_date, read_journal
 from logseq_cli.core.links import backlinks, outgoing
 from logseq_cli.core.pages import append_to_page, append_under_heading, create_page, list_pages, resolve_page
-from logseq_cli.core.search import search_text
+from logseq_cli.core.search import search_links, search_tags, search_text
 from logseq_cli.core.stats import graph_stats
 from logseq_cli.core.summaries import summarize_daily, summarize_journal, summarize_project, summarize_topic, summarize_weekly
 from logseq_cli.core.tasks import list_tasks
@@ -39,12 +39,14 @@ app.add_typer(summarize_app, name="summarize")
 GraphOption = Annotated[Path | None, typer.Option("--graph", help="Path to the graph root.")]
 JsonOption = Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")]
 RawOption = Annotated[bool, typer.Option("--raw", help="Emit raw document content.")]
+QuietOption = Annotated[bool, typer.Option("--quiet", help="Suppress human-readable stdout output.")]
 
 
 @graph_app.command("detect")
 def graph_detect(
     graph: GraphOption = None,
     json_output: JsonOption = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "graph detect"
     resolved_graph = None
@@ -62,7 +64,7 @@ def graph_detect(
     }
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(str(resolved_graph.root))
 
 
@@ -70,6 +72,7 @@ def graph_detect(
 def graph_stats_command(
     graph: GraphOption = None,
     json_output: JsonOption = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "graph stats"
     resolved_graph = None
@@ -82,7 +85,7 @@ def graph_stats_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(f"Pages: {data['pages']}")
         typer.echo(f"Journals: {data['journals']}")
         typer.echo(f"Documents: {data['documents']}")
@@ -93,6 +96,7 @@ def graph_stats_command(
 def page_list(
     graph: GraphOption = None,
     json_output: JsonOption = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "page list"
     resolved_graph = None
@@ -114,7 +118,7 @@ def page_list(
     ]
     if json_output:
         emit_json(make_success(command, resolved_graph, {"pages": page_data, "count": len(page_data)}))
-    else:
+    elif not quiet:
         for page in page_data:
             typer.echo(f"{page['title']} ({page['name']})")
 
@@ -125,6 +129,7 @@ def page_read(
     graph: GraphOption = None,
     json_output: JsonOption = False,
     raw: RawOption = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "page read"
     resolved_graph = None
@@ -144,7 +149,7 @@ def page_read(
     data = document.model_dump(mode="json")
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(document.content)
 
 
@@ -156,6 +161,7 @@ def page_create(
     text: Annotated[str, typer.Option("--text", help="Optional initial page body.")] = "",
     page_format: Annotated[str, typer.Option("--format", help="Page format: markdown or org.")] = "markdown",
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be created without writing.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "page create"
     resolved_graph = None
@@ -174,7 +180,7 @@ def page_create(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, result))
-    else:
+    elif not quiet:
         action = "Would create" if dry_run else "Created"
         typer.echo(f"{action} {result['path']}")
 
@@ -186,6 +192,7 @@ def page_append(
     json_output: JsonOption = False,
     text: Annotated[str, typer.Option("--text", help="Text to append at the end of the page.")] = "",
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be appended without writing.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "page append"
     resolved_graph = None
@@ -203,7 +210,7 @@ def page_append(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, result))
-    else:
+    elif not quiet:
         action = "Would append to" if dry_run else "Appended to"
         typer.echo(f"{action} {result['path']}")
 
@@ -216,6 +223,7 @@ def page_append_under(
     heading: Annotated[str, typer.Option("--heading", help="Heading title to append under.")] = "",
     text: Annotated[str, typer.Option("--text", help="Text to append within the heading section.")] = "",
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be appended without writing.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "page append-under"
     resolved_graph = None
@@ -234,7 +242,7 @@ def page_append_under(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, result))
-    else:
+    elif not quiet:
         action = "Would append under" if dry_run else "Appended under"
         typer.echo(f"{action} '{result['heading']}' in {result['path']}")
 
@@ -246,6 +254,7 @@ def journal_read(
     raw: RawOption = False,
     date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
     today: Annotated[bool, typer.Option("--today", help="Read today's journal.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "journal read"
     resolved_graph = None
@@ -266,7 +275,7 @@ def journal_read(
     data = document.model_dump(mode="json")
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(document.content)
 
 
@@ -275,6 +284,7 @@ def journal_list(
     graph: GraphOption = None,
     json_output: JsonOption = False,
     limit: Annotated[int | None, typer.Option("--limit", min=1, help="Maximum number of journals to return.")] = None,
+    quiet: QuietOption = False,
 ) -> None:
     command = "journal list"
     resolved_graph = None
@@ -299,7 +309,7 @@ def journal_list(
     }
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         for journal in data["journals"]:
             typer.echo(journal["title"])
 
@@ -312,6 +322,7 @@ def journal_ensure(
     today: Annotated[bool, typer.Option("--today", help="Ensure today's journal exists.")] = False,
     journal_format: Annotated[str, typer.Option("--format", help="Journal format: markdown or org.")] = "markdown",
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be created without writing.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "journal ensure"
     resolved_graph = None
@@ -330,7 +341,7 @@ def journal_ensure(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, result))
-    else:
+    elif not quiet:
         action = "Would create" if dry_run and result["created"] else "Exists"
         if not dry_run and result["created"]:
             action = "Created"
@@ -345,6 +356,7 @@ def journal_append(
     date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
     today: Annotated[bool, typer.Option("--today", help="Append to today's journal.")] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be appended without writing.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "journal append"
     resolved_graph = None
@@ -358,7 +370,7 @@ def journal_append(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, result))
-    else:
+    elif not quiet:
         action = "Would append" if dry_run else "Appended"
         typer.echo(f"{action} to {result['path']}")
         typer.echo(result["appended_text"], nl=False)
@@ -370,6 +382,7 @@ def journal_summarize(
     json_output: JsonOption = False,
     date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
     today: Annotated[bool, typer.Option("--today", help="Summarize today's journal.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "journal summarize"
     resolved_graph = None
@@ -383,7 +396,7 @@ def journal_summarize(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(f"Journal: {data['title']}")
         typer.echo(f"Blocks: {data['block_count']}")
         typer.echo(f"Tasks: {data['task_count']}")
@@ -397,6 +410,7 @@ def search_text_command(
     scope: Annotated[str, typer.Option("--scope", help="Comma-separated scopes: pages,journals")] = "pages,journals",
     limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum number of hits.")] = 20,
     case_sensitive: Annotated[bool, typer.Option("--case-sensitive", help="Use case-sensitive matching.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "search text"
     resolved_graph = None
@@ -415,9 +429,79 @@ def search_text_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, {"hits": hits, "query": query, "count": len(hits)}))
-    else:
+    elif not quiet:
         for hit in hits:
             typer.echo(f"{hit.path}:{hit.line_no}: {hit.snippet}")
+
+
+@search_app.command("links")
+def search_links_command(
+    target: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    scope: Annotated[str, typer.Option("--scope", help="Comma-separated scopes: pages,journals")] = "pages,journals",
+    limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum number of hits.")] = 20,
+    quiet: QuietOption = False,
+) -> None:
+    command = "search links"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        hits = search_links(
+            resolved_graph,
+            target,
+            scope=scope,
+            limit=limit,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    data = {
+        "target": target,
+        "hits": hits,
+        "count": len(hits),
+    }
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        for hit in hits:
+            typer.echo(f"{hit['path']}:{hit['line_no']} {hit['snippet']}")
+
+
+@search_app.command("tags")
+def search_tags_command(
+    tag: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    scope: Annotated[str, typer.Option("--scope", help="Comma-separated scopes: pages,journals")] = "pages,journals",
+    limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum number of hits.")] = 20,
+    quiet: QuietOption = False,
+) -> None:
+    command = "search tags"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        hits = search_tags(
+            resolved_graph,
+            tag,
+            scope=scope,
+            limit=limit,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    data = {
+        "tag": tag.lstrip("#"),
+        "hits": hits,
+        "count": len(hits),
+    }
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        for hit in hits:
+            typer.echo(f"{hit['path']}:{hit['line_no']} {hit['snippet']}")
 
 
 @tasks_app.command("list")
@@ -425,6 +509,7 @@ def tasks_list_command(
     graph: GraphOption = None,
     json_output: JsonOption = False,
     state: Annotated[str | None, typer.Option("--state", help="Comma-separated TODO states to include.")] = None,
+    quiet: QuietOption = False,
 ) -> None:
     command = "tasks list"
     resolved_graph = None
@@ -437,7 +522,7 @@ def tasks_list_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, {"tasks": tasks, "count": len(tasks)}))
-    else:
+    elif not quiet:
         for task in tasks:
             typer.echo(f"[{task.state}] {task.text} ({task.path}:{task.line_no})")
 
@@ -447,6 +532,7 @@ def links_backlinks(
     page_name: str,
     graph: GraphOption = None,
     json_output: JsonOption = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "links backlinks"
     resolved_graph = None
@@ -464,7 +550,7 @@ def links_backlinks(
     }
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         for match in matches:
             typer.echo(f"{match['title']}:{match['line_no']} {match['text']}")
 
@@ -474,6 +560,7 @@ def links_outgoing(
     page_name: str,
     graph: GraphOption = None,
     json_output: JsonOption = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "links outgoing"
     resolved_graph = None
@@ -486,7 +573,7 @@ def links_outgoing(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         for link in data["links"]:
             typer.echo(f"{link['page']} ({link['count']})")
 
@@ -499,6 +586,7 @@ def capture_quick(
     date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
     today: Annotated[bool, typer.Option("--today", help="Capture into today's journal.")] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be captured without writing.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "capture quick"
     resolved_graph = None
@@ -517,7 +605,7 @@ def capture_quick(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, result))
-    else:
+    elif not quiet:
         action = "Would capture into" if dry_run else "Captured into"
         typer.echo(f"{action} {result['path']}")
 
@@ -530,6 +618,7 @@ def capture_project_command(
     text: Annotated[str, typer.Option("--text", help="Project capture text to append as a bullet.")] = "",
     create_page: Annotated[bool, typer.Option("--create-page", help="Create the project page when missing.")] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be captured without writing.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "capture project"
     resolved_graph = None
@@ -548,7 +637,7 @@ def capture_project_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, result))
-    else:
+    elif not quiet:
         action = "Would capture into" if dry_run else "Captured into"
         typer.echo(f"{action} {result['path']}")
 
@@ -562,6 +651,7 @@ def capture_task_command(
     date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
     today: Annotated[bool, typer.Option("--today", help="Capture into today's journal.")] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be captured without writing.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "capture task"
     resolved_graph = None
@@ -581,7 +671,7 @@ def capture_task_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, result))
-    else:
+    elif not quiet:
         action = "Would capture into" if dry_run else "Captured into"
         typer.echo(f"{action} {result['path']}")
 
@@ -592,6 +682,7 @@ def summarize_daily_command(
     json_output: JsonOption = False,
     date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
     today: Annotated[bool, typer.Option("--today", help="Summarize today's journal.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "summarize daily"
     resolved_graph = None
@@ -605,7 +696,7 @@ def summarize_daily_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(f"Daily summary for {data['journal_date']}")
         typer.echo(f"Blocks: {data['block_count']}")
         typer.echo(f"Tasks: {data['task_count']}")
@@ -617,6 +708,7 @@ def summarize_weekly_command(
     json_output: JsonOption = False,
     date_value: Annotated[str | None, typer.Option("--date", help="Anchor date as YYYY-MM-DD.")] = None,
     today: Annotated[bool, typer.Option("--today", help="Use today's date as the weekly anchor.")] = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "summarize weekly"
     resolved_graph = None
@@ -630,7 +722,7 @@ def summarize_weekly_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(f"Weekly summary ending {data['end_date']}")
         typer.echo(f"Journals: {data['journal_count']}")
         typer.echo(f"Tasks: {data['task_count']}")
@@ -641,6 +733,7 @@ def summarize_project_command(
     project_name: str,
     graph: GraphOption = None,
     json_output: JsonOption = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "summarize project"
     resolved_graph = None
@@ -653,7 +746,7 @@ def summarize_project_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(f"Project summary for {data['project_title']}")
         typer.echo(f"Sources: {data['source_count']}")
         typer.echo(f"Tasks: {data['related_task_count']}")
@@ -664,6 +757,7 @@ def summarize_topic_command(
     topic: str,
     graph: GraphOption = None,
     json_output: JsonOption = False,
+    quiet: QuietOption = False,
 ) -> None:
     command = "summarize topic"
     resolved_graph = None
@@ -676,7 +770,7 @@ def summarize_topic_command(
 
     if json_output:
         emit_json(make_success(command, resolved_graph, data))
-    else:
+    elif not quiet:
         typer.echo(f"Topic summary for {data['topic']}")
         typer.echo(f"Sources: {data['source_count']}")
         typer.echo(f"Matches: {data['match_count']}")

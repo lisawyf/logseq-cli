@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 import re
 import tempfile
@@ -18,15 +19,17 @@ def normalize_page_name(value: str) -> str:
 def build_document(path: Path, doc_type: str) -> Document:
     content = path.read_text(encoding="utf-8")
     title = extract_title(content, path)
+    journal_title = _journal_title_from_path(path) if doc_type == "journal" else None
     return Document(
         name=path.stem,
-        title=title,
+        title=journal_title or title,
         path=path.resolve(),
         doc_type=doc_type,
         format="org" if path.suffix.lower() == ".org" else "markdown",
         content=content,
         blocks=parse_blocks(content, path),
         is_journal=(doc_type == "journal"),
+        journal_date=None,
     )
 
 
@@ -305,3 +308,10 @@ def _atomic_write(path: Path, content: str) -> None:
         handle.write(content)
         temp_path = Path(handle.name)
     temp_path.replace(path)
+
+
+def _journal_title_from_path(path: Path) -> str | None:
+    try:
+        return date.fromisoformat(path.stem.replace("_", "-")).isoformat()
+    except ValueError:
+        return None

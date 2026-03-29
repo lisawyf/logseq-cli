@@ -29,6 +29,8 @@ The current CLI implements these commands:
 - `summarize weekly`
 - `summarize project`
 - `summarize topic`
+- `search links`
+- `search tags`
 - `search text`
 - `tasks list`
 
@@ -157,6 +159,24 @@ Search text:
 logseq-cli search text "OpenClaw" --graph ~/Documents/Logseq --scope pages,journals --json
 ```
 
+Search page refs:
+
+```bash
+logseq-cli search links "Project Notes" --graph ~/Documents/Logseq --json
+```
+
+Search tags:
+
+```bash
+logseq-cli search tags "ops" --graph ~/Documents/Logseq --json
+```
+
+Suppress human-readable output:
+
+```bash
+logseq-cli graph detect --graph ~/Documents/Logseq --quiet
+```
+
 List tasks:
 
 ```bash
@@ -274,6 +294,12 @@ Stable exit codes:
 - `5` write conflict
 - `6` parse failure
 
+## Output Modes
+
+- `--json` emits the stable machine-readable envelope.
+- `--raw` is available on read commands that can print document content directly.
+- `--quiet` suppresses normal human-readable stdout output but does not disable writes or change exit codes.
+
 ## Current Behavior
 
 - Page resolution tries exact filename, case-insensitive filename, normalized filename, then heading-title matching.
@@ -281,6 +307,8 @@ Stable exit codes:
 - Page append performs end-of-file append only; it does not rewrite or target headings.
 - Page append-under appends within the matched section and stops before the next same-or-higher-level heading.
 - Search is plain text substring search with optional `--scope` and `--limit`.
+- Search links matches parsed `[[Page]]` references.
+- Search tags matches parsed Markdown and Org tags.
 - Task extraction recognizes common Logseq-style TODO states from Markdown bullets and Org headings.
 - Journal list returns journals in descending date order.
 - Journal ensure creates an empty journal file only when missing.

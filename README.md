@@ -25,6 +25,10 @@ The current CLI implements these commands:
 - `capture quick`
 - `capture project`
 - `capture task`
+- `summarize daily`
+- `summarize weekly`
+- `summarize project`
+- `summarize topic`
 - `search text`
 - `tasks list`
 
@@ -189,6 +193,30 @@ Capture a task:
 logseq-cli capture task --graph ~/Documents/Logseq --today --text "Follow up with team" --project "Project Alpha" --json
 ```
 
+Summarize a day:
+
+```bash
+logseq-cli summarize daily --graph ~/Documents/Logseq --date 2026-03-29 --json
+```
+
+Summarize a week:
+
+```bash
+logseq-cli summarize weekly --graph ~/Documents/Logseq --date 2026-03-29 --json
+```
+
+Summarize a project:
+
+```bash
+logseq-cli summarize project "OpenClaw" --graph ~/Documents/Logseq --json
+```
+
+Summarize a topic:
+
+```bash
+logseq-cli summarize topic "ops" --graph ~/Documents/Logseq --json
+```
+
 ## Graph Resolution
 
 Graph discovery order:
@@ -262,6 +290,9 @@ Stable exit codes:
 - Capture quick is a thin wrapper around safe journal append.
 - Capture project appends a bullet to a project page and can create the page only with `--create-page`.
 - Capture task appends a `TODO` entry to a journal and can include a project page reference.
+- Summaries are rule-based aggregates over parsed journal content, not free-form generated text.
+- Project summaries combine the project page, references to that page, related tasks, and outgoing page refs.
+- Topic summaries aggregate blocks and tasks by case-insensitive text, tag, or page-ref matches.
 
 ## Known Limitations
 

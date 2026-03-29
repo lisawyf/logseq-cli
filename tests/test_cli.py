@@ -365,6 +365,72 @@ def test_journal_summarize_json(runner, fixture_graph: Path) -> None:
     assert '"work"' in result.stdout
 
 
+def test_summarize_daily_json(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["summarize", "daily", "--graph", str(fixture_graph), "--date", "2026-03-29", "--json"],
+    )
+
+    assert result.exit_code == 0
+    assert '"command": "summarize daily"' in result.stdout
+    assert '"summary_type": "daily"' in result.stdout
+    assert '"journal_date": "2026-03-29"' in result.stdout
+
+
+def test_summarize_weekly_json(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "journals" / "2026_03_25.md").write_text("- TODO First #ops [[Alpha]]\n", encoding="utf-8")
+    (graph / "journals" / "2026_03_29.md").write_text("- TODO Second #work [[Beta]]\n", encoding="utf-8")
+    (graph / "journals" / "2026_03_30.md").write_text("- TODO Outside range\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["summarize", "weekly", "--graph", str(graph), "--date", "2026-03-29", "--json"],
+    )
+
+    assert result.exit_code == 0
+    assert '"command": "summarize weekly"' in result.stdout
+    assert '"summary_type": "weekly"' in result.stdout
+    assert '"start_date": "2026-03-23"' in result.stdout
+    assert '"end_date": "2026-03-29"' in result.stdout
+    assert '"journal_count": 2' in result.stdout
+    assert '"task_count": 2' in result.stdout
+    assert '"Alpha"' in result.stdout
+    assert '"Beta"' in result.stdout
+
+
+def test_summarize_project_json(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["summarize", "project", "OpenClaw", "--graph", str(fixture_graph), "--json"],
+    )
+
+    assert result.exit_code == 0
+    assert '"command": "summarize project"' in result.stdout
+    assert '"summary_type": "project"' in result.stdout
+    assert '"project_title": "OpenClaw"' in result.stdout
+    assert '"backlinks_count": 1' in result.stdout
+    assert '"outgoing_count": 2' in result.stdout
+
+
+def test_summarize_topic_json(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["summarize", "topic", "ops", "--graph", str(fixture_graph), "--json"],
+    )
+
+    assert result.exit_code == 0
+    assert '"command": "summarize topic"' in result.stdout
+    assert '"summary_type": "topic"' in result.stdout
+    assert '"topic": "ops"' in result.stdout
+    assert '"match_count": 3' in result.stdout
+    assert '"task_count": 3' in result.stdout
+
+
 def test_search_text_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(
         app,

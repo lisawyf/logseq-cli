@@ -13,7 +13,7 @@ from logseq_cli.core.links import backlinks, outgoing
 from logseq_cli.core.pages import append_to_page, append_under_heading, create_page, list_pages, resolve_page
 from logseq_cli.core.search import search_text
 from logseq_cli.core.stats import graph_stats
-from logseq_cli.core.summaries import summarize_journal
+from logseq_cli.core.summaries import summarize_daily, summarize_journal, summarize_project, summarize_topic, summarize_weekly
 from logseq_cli.core.tasks import list_tasks
 from logseq_cli.utils.output import emit_failure, emit_json, make_success
 
@@ -25,6 +25,7 @@ search_app = typer.Typer(no_args_is_help=True)
 tasks_app = typer.Typer(no_args_is_help=True)
 links_app = typer.Typer(no_args_is_help=True)
 capture_app = typer.Typer(no_args_is_help=True)
+summarize_app = typer.Typer(no_args_is_help=True)
 
 app.add_typer(graph_app, name="graph")
 app.add_typer(page_app, name="page")
@@ -33,6 +34,7 @@ app.add_typer(search_app, name="search")
 app.add_typer(tasks_app, name="tasks")
 app.add_typer(links_app, name="links")
 app.add_typer(capture_app, name="capture")
+app.add_typer(summarize_app, name="summarize")
 
 GraphOption = Annotated[Path | None, typer.Option("--graph", help="Path to the graph root.")]
 JsonOption = Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")]
@@ -582,3 +584,99 @@ def capture_task_command(
     else:
         action = "Would capture into" if dry_run else "Captured into"
         typer.echo(f"{action} {result['path']}")
+
+
+@summarize_app.command("daily")
+def summarize_daily_command(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
+    today: Annotated[bool, typer.Option("--today", help="Summarize today's journal.")] = False,
+) -> None:
+    command = "summarize daily"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        target_date = parse_target_date(target_date=date_value, today=today)
+        data = summarize_daily(resolved_graph, target_date)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        typer.echo(f"Daily summary for {data['journal_date']}")
+        typer.echo(f"Blocks: {data['block_count']}")
+        typer.echo(f"Tasks: {data['task_count']}")
+
+
+@summarize_app.command("weekly")
+def summarize_weekly_command(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    date_value: Annotated[str | None, typer.Option("--date", help="Anchor date as YYYY-MM-DD.")] = None,
+    today: Annotated[bool, typer.Option("--today", help="Use today's date as the weekly anchor.")] = False,
+) -> None:
+    command = "summarize weekly"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        target_date = parse_target_date(target_date=date_value, today=today)
+        data = summarize_weekly(resolved_graph, target_date)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        typer.echo(f"Weekly summary ending {data['end_date']}")
+        typer.echo(f"Journals: {data['journal_count']}")
+        typer.echo(f"Tasks: {data['task_count']}")
+
+
+@summarize_app.command("project")
+def summarize_project_command(
+    project_name: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+) -> None:
+    command = "summarize project"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        data = summarize_project(resolved_graph, project_name)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        typer.echo(f"Project summary for {data['project_title']}")
+        typer.echo(f"Sources: {data['source_count']}")
+        typer.echo(f"Tasks: {data['related_task_count']}")
+
+
+@summarize_app.command("topic")
+def summarize_topic_command(
+    topic: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+) -> None:
+    command = "summarize topic"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        data = summarize_topic(resolved_graph, topic)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        typer.echo(f"Topic summary for {data['topic']}")
+        typer.echo(f"Sources: {data['source_count']}")
+        typer.echo(f"Matches: {data['match_count']}")

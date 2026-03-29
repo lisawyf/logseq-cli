@@ -7,9 +7,12 @@ import typer
 
 from logseq_cli.core.errors import LogseqCliError
 from logseq_cli.core.graph import resolve_graph
-from logseq_cli.core.journals import append_to_journal, parse_target_date, read_journal
-from logseq_cli.core.pages import list_pages, resolve_page
+from logseq_cli.core.journals import append_to_journal, ensure_journal, list_journals, parse_target_date, read_journal
+from logseq_cli.core.links import backlinks, outgoing
+from logseq_cli.core.pages import append_to_page, append_under_heading, create_page, list_pages, resolve_page
 from logseq_cli.core.search import search_text
+from logseq_cli.core.stats import graph_stats
+from logseq_cli.core.summaries import summarize_journal
 from logseq_cli.core.tasks import list_tasks
 from logseq_cli.utils.output import emit_failure, emit_json, make_success
 
@@ -19,12 +22,16 @@ page_app = typer.Typer(no_args_is_help=True)
 journal_app = typer.Typer(no_args_is_help=True)
 search_app = typer.Typer(no_args_is_help=True)
 tasks_app = typer.Typer(no_args_is_help=True)
+links_app = typer.Typer(no_args_is_help=True)
+capture_app = typer.Typer(no_args_is_help=True)
 
 app.add_typer(graph_app, name="graph")
 app.add_typer(page_app, name="page")
 app.add_typer(journal_app, name="journal")
 app.add_typer(search_app, name="search")
 app.add_typer(tasks_app, name="tasks")
+app.add_typer(links_app, name="links")
+app.add_typer(capture_app, name="capture")
 
 GraphOption = Annotated[Path | None, typer.Option("--graph", help="Path to the graph root.")]
 JsonOption = Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")]
@@ -54,6 +61,29 @@ def graph_detect(
         emit_json(make_success(command, resolved_graph, data))
     else:
         typer.echo(str(resolved_graph.root))
+
+
+@graph_app.command("stats")
+def graph_stats_command(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+) -> None:
+    command = "graph stats"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        data = graph_stats(resolved_graph)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        typer.echo(f"Pages: {data['pages']}")
+        typer.echo(f"Journals: {data['journals']}")
+        typer.echo(f"Documents: {data['documents']}")
+        typer.echo(f"Tasks: {data['tasks']}")
 
 
 @page_app.command("list")
@@ -115,6 +145,97 @@ def page_read(
         typer.echo(document.content)
 
 
+@page_app.command("create")
+def page_create(
+    page_name: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    text: Annotated[str, typer.Option("--text", help="Optional initial page body.")] = "",
+    page_format: Annotated[str, typer.Option("--format", help="Page format: markdown or org.")] = "markdown",
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be created without writing.")] = False,
+) -> None:
+    command = "page create"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        result = create_page(
+            resolved_graph,
+            page_name,
+            text=text,
+            doc_format=page_format,
+            dry_run=dry_run,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, result))
+    else:
+        action = "Would create" if dry_run else "Created"
+        typer.echo(f"{action} {result['path']}")
+
+
+@page_app.command("append")
+def page_append(
+    page_name: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    text: Annotated[str, typer.Option("--text", help="Text to append at the end of the page.")] = "",
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be appended without writing.")] = False,
+) -> None:
+    command = "page append"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        result = append_to_page(
+            resolved_graph,
+            page_name,
+            text,
+            dry_run=dry_run,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, result))
+    else:
+        action = "Would append to" if dry_run else "Appended to"
+        typer.echo(f"{action} {result['path']}")
+
+
+@page_app.command("append-under")
+def page_append_under(
+    page_name: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    heading: Annotated[str, typer.Option("--heading", help="Heading title to append under.")] = "",
+    text: Annotated[str, typer.Option("--text", help="Text to append within the heading section.")] = "",
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be appended without writing.")] = False,
+) -> None:
+    command = "page append-under"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        result = append_under_heading(
+            resolved_graph,
+            page_name,
+            heading,
+            text,
+            dry_run=dry_run,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, result))
+    else:
+        action = "Would append under" if dry_run else "Appended under"
+        typer.echo(f"{action} '{result['heading']}' in {result['path']}")
+
+
 @journal_app.command("read")
 def journal_read(
     graph: GraphOption = None,
@@ -146,6 +267,73 @@ def journal_read(
         typer.echo(document.content)
 
 
+@journal_app.command("list")
+def journal_list(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    limit: Annotated[int | None, typer.Option("--limit", min=1, help="Maximum number of journals to return.")] = None,
+) -> None:
+    command = "journal list"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        journals = list_journals(resolved_graph, limit=limit)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    data = {
+        "journals": [
+            {
+                "title": document.title,
+                "path": str(document.path),
+                "format": document.format,
+                "journal_date": document.journal_date.isoformat() if document.journal_date else None,
+            }
+            for document in journals
+        ],
+        "count": len(journals),
+    }
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        for journal in data["journals"]:
+            typer.echo(journal["title"])
+
+
+@journal_app.command("ensure")
+def journal_ensure(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
+    today: Annotated[bool, typer.Option("--today", help="Ensure today's journal exists.")] = False,
+    journal_format: Annotated[str, typer.Option("--format", help="Journal format: markdown or org.")] = "markdown",
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be created without writing.")] = False,
+) -> None:
+    command = "journal ensure"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        journal_date = parse_target_date(target_date=date_value, today=today)
+        result = ensure_journal(
+            resolved_graph,
+            journal_date,
+            doc_format=journal_format,
+            dry_run=dry_run,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, result))
+    else:
+        action = "Would create" if dry_run and result["created"] else "Exists"
+        if not dry_run and result["created"]:
+            action = "Created"
+        typer.echo(f"{action} {result['path']}")
+
+
 @journal_app.command("append")
 def journal_append(
     graph: GraphOption = None,
@@ -171,6 +359,31 @@ def journal_append(
         action = "Would append" if dry_run else "Appended"
         typer.echo(f"{action} to {result['path']}")
         typer.echo(result["appended_text"], nl=False)
+
+
+@journal_app.command("summarize")
+def journal_summarize(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
+    today: Annotated[bool, typer.Option("--today", help="Summarize today's journal.")] = False,
+) -> None:
+    command = "journal summarize"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        journal_date = parse_target_date(target_date=date_value, today=today)
+        data = summarize_journal(resolved_graph, journal_date)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        typer.echo(f"Journal: {data['title']}")
+        typer.echo(f"Blocks: {data['block_count']}")
+        typer.echo(f"Tasks: {data['task_count']}")
 
 
 @search_app.command("text")
@@ -224,3 +437,83 @@ def tasks_list_command(
     else:
         for task in tasks:
             typer.echo(f"[{task.state}] {task.text} ({task.path}:{task.line_no})")
+
+
+@links_app.command("backlinks")
+def links_backlinks(
+    page_name: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+) -> None:
+    command = "links backlinks"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        matches = backlinks(resolved_graph, page_name)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    data = {
+        "page": page_name,
+        "matches": matches,
+        "count": len(matches),
+    }
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        for match in matches:
+            typer.echo(f"{match['title']}:{match['line_no']} {match['text']}")
+
+
+@links_app.command("outgoing")
+def links_outgoing(
+    page_name: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+) -> None:
+    command = "links outgoing"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        data = outgoing(resolved_graph, page_name)
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    else:
+        for link in data["links"]:
+            typer.echo(f"{link['page']} ({link['count']})")
+
+
+@capture_app.command("quick")
+def capture_quick(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    text: Annotated[str, typer.Option("--text", help="Quick capture text to append to a journal.")] = "",
+    date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
+    today: Annotated[bool, typer.Option("--today", help="Capture into today's journal.")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be captured without writing.")] = False,
+) -> None:
+    command = "capture quick"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        journal_date = parse_target_date(target_date=date_value, today=today)
+        result = append_to_journal(
+            resolved_graph,
+            journal_date,
+            text,
+            dry_run=dry_run,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, result))
+    else:
+        action = "Would capture into" if dry_run else "Captured into"
+        typer.echo(f"{action} {result['path']}")

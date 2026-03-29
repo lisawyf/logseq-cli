@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 
 from logseq_cli.core.capture import capture_project, capture_task
+from logseq_cli.core.config import get_config_path, set_default_graph_path
 from logseq_cli.core.errors import LogseqCliError
 from logseq_cli.core.graph import resolve_graph
 from logseq_cli.core.journals import append_to_journal, ensure_journal, list_journals, parse_target_date, read_journal
@@ -90,6 +91,32 @@ def graph_stats_command(
         typer.echo(f"Journals: {data['journals']}")
         typer.echo(f"Documents: {data['documents']}")
         typer.echo(f"Tasks: {data['tasks']}")
+
+
+@graph_app.command("use")
+def graph_use(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    quiet: QuietOption = False,
+) -> None:
+    command = "graph use"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        config_path = set_default_graph_path(resolved_graph.root)
+        data = {
+            "root": str(resolved_graph.root),
+            "config_path": str(config_path),
+            "default_graph": str(resolved_graph.root),
+        }
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        typer.echo(str(resolved_graph.root))
 
 
 @page_app.command("list")

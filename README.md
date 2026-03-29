@@ -9,6 +9,7 @@ It works directly on local graph folders and is intended for local shells, scrip
 The current CLI implements these commands:
 
 - `graph detect`
+- `graph use`
 - `graph stats`
 - `page list`
 - `page read`
@@ -80,6 +81,12 @@ Detect a graph:
 
 ```bash
 logseq-cli graph detect --graph ~/Documents/Logseq
+```
+
+Set the default graph for later commands:
+
+```bash
+logseq-cli graph use --graph ~/Documents/Logseq
 ```
 
 Show graph stats:
@@ -252,6 +259,8 @@ Optional config example:
 default_graph = "/Users/you/Documents/Logseq"
 ```
 
+After `graph use`, commands can run outside the graph directory as long as no explicit `--graph` overrides it.
+
 ## JSON Contract
 
 Successful responses use this envelope:
@@ -334,3 +343,28 @@ Stable exit codes:
 
 - [CHANGELOG.md](/Users/yiyi/program/llm/logseq-cli/CHANGELOG.md)
 - [RELEASE.md](/Users/yiyi/program/llm/logseq-cli/RELEASE.md)
+
+## Install Built Artifacts
+
+Install on the current machine from the built wheel:
+
+```bash
+python3 -m pip install dist/logseq_cli-0.1.0-py3-none-any.whl
+```
+
+Upgrade an existing install:
+
+```bash
+python3 -m pip install --upgrade dist/logseq_cli-0.1.0-py3-none-any.whl
+```
+
+Install on another machine:
+
+1. Copy `dist/logseq_cli-0.1.0-py3-none-any.whl` to that machine.
+2. Run:
+
+```bash
+python3 -m pip install logseq_cli-0.1.0-py3-none-any.whl
+```
+
+If the other machine cannot resolve dependencies from package indexes, you can either install them separately first or use the same Python environment strategy you use locally.

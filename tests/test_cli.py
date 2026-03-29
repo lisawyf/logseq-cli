@@ -34,6 +34,38 @@ def test_graph_detect_autodiscovery(runner, fixture_graph: Path, monkeypatch) ->
     assert result.stdout.strip() == str(fixture_graph.resolve())
 
 
+def test_graph_use_writes_default_graph_config(runner, fixture_graph: Path, tmp_path: Path, monkeypatch) -> None:
+    config_path = tmp_path / "config.toml"
+    monkeypatch.setenv("LOGSEQ_CLI_CONFIG_PATH", str(config_path))
+
+    result = runner.invoke(app, ["graph", "use", "--graph", str(fixture_graph), "--json"])
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["ok"] is True
+    assert payload["command"] == "graph use"
+    assert payload["data"]["default_graph"] == str(fixture_graph.resolve())
+    assert config_path.read_text(encoding="utf-8").startswith(f'default_graph = "{fixture_graph.resolve()}"')
+
+
+def test_graph_use_allows_commands_outside_graph(runner, fixture_graph: Path, tmp_path: Path, monkeypatch) -> None:
+    config_path = tmp_path / "config.toml"
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    monkeypatch.setenv("LOGSEQ_CLI_CONFIG_PATH", str(config_path))
+
+    use_result = runner.invoke(app, ["graph", "use", "--graph", str(fixture_graph), "--json"])
+    assert use_result.exit_code == 0
+
+    monkeypatch.chdir(outside_dir)
+    result = runner.invoke(app, ["page", "list", "--json"])
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["ok"] is True
+    assert payload["graph_root"] == str(fixture_graph.resolve())
+    assert payload["data"]["count"] == 3
+
+
 def test_graph_stats_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(app, ["graph", "stats", "--graph", str(fixture_graph), "--json"])
 

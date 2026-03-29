@@ -5,6 +5,7 @@ from typing import Annotated
 
 import typer
 
+from logseq_cli.core.capture import capture_project, capture_task
 from logseq_cli.core.errors import LogseqCliError
 from logseq_cli.core.graph import resolve_graph
 from logseq_cli.core.journals import append_to_journal, ensure_journal, list_journals, parse_target_date, read_journal
@@ -506,6 +507,70 @@ def capture_quick(
             resolved_graph,
             journal_date,
             text,
+            dry_run=dry_run,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, result))
+    else:
+        action = "Would capture into" if dry_run else "Captured into"
+        typer.echo(f"{action} {result['path']}")
+
+
+@capture_app.command("project")
+def capture_project_command(
+    project_name: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    text: Annotated[str, typer.Option("--text", help="Project capture text to append as a bullet.")] = "",
+    create_page: Annotated[bool, typer.Option("--create-page", help="Create the project page when missing.")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be captured without writing.")] = False,
+) -> None:
+    command = "capture project"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        result = capture_project(
+            resolved_graph,
+            project_name,
+            text,
+            create_missing=create_page,
+            dry_run=dry_run,
+        )
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, result))
+    else:
+        action = "Would capture into" if dry_run else "Captured into"
+        typer.echo(f"{action} {result['path']}")
+
+
+@capture_app.command("task")
+def capture_task_command(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    text: Annotated[str, typer.Option("--text", help="Task text to capture as a TODO.")] = "",
+    project: Annotated[str | None, typer.Option("--project", help="Optional project page reference to append to the task.")] = None,
+    date_value: Annotated[str | None, typer.Option("--date", help="Journal date as YYYY-MM-DD.")] = None,
+    today: Annotated[bool, typer.Option("--today", help="Capture into today's journal.")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be captured without writing.")] = False,
+) -> None:
+    command = "capture task"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        journal_date = parse_target_date(target_date=date_value, today=today)
+        result = capture_task(
+            resolved_graph,
+            text,
+            journal_date=journal_date,
+            project_name=project,
             dry_run=dry_run,
         )
     except LogseqCliError as error:

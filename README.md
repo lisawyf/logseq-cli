@@ -23,6 +23,8 @@ The current CLI implements these commands:
 - `links backlinks`
 - `links outgoing`
 - `capture quick`
+- `capture project`
+- `capture task`
 - `search text`
 - `tasks list`
 
@@ -175,6 +177,18 @@ Quick capture to a journal:
 logseq-cli capture quick --graph ~/Documents/Logseq --today --text "Captured item" --json
 ```
 
+Capture a project note:
+
+```bash
+logseq-cli capture project "Project Alpha" --graph ~/Documents/Logseq --text "Investigated issue" --json
+```
+
+Capture a task:
+
+```bash
+logseq-cli capture task --graph ~/Documents/Logseq --today --text "Follow up with team" --project "Project Alpha" --json
+```
+
 ## Graph Resolution
 
 Graph discovery order:
@@ -246,6 +260,8 @@ Stable exit codes:
 - Journal summarize is rule-based and reports block counts, task states, page refs, and tags.
 - Link inspection is based on parsed `[[Page]]` references in page and journal content.
 - Capture quick is a thin wrapper around safe journal append.
+- Capture project appends a bullet to a project page and can create the page only with `--create-page`.
+- Capture task appends a `TODO` entry to a journal and can include a project page reference.
 
 ## Known Limitations
 

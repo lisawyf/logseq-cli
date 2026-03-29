@@ -430,6 +430,93 @@ def test_capture_quick_json(runner, tmp_path: Path) -> None:
     assert journal_path.read_text(encoding="utf-8") == "- Captured item\n"
 
 
+def test_capture_project_appends_to_existing_page(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    page_path = graph / "pages" / "Project Alpha.md"
+    page_path.write_text("# Project Alpha\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "capture",
+            "project",
+            "Project Alpha",
+            "--graph",
+            str(graph),
+            "--text",
+            "Investigated issue",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert '"command": "capture project"' in result.stdout
+    assert '"created_page": false' in result.stdout
+    assert page_path.read_text(encoding="utf-8") == "# Project Alpha\n- Investigated issue\n"
+
+
+def test_capture_project_can_create_missing_page(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "capture",
+            "project",
+            "Project Beta",
+            "--graph",
+            str(graph),
+            "--text",
+            "Created from capture",
+            "--create-page",
+            "--json",
+        ],
+    )
+
+    page_path = graph / "pages" / "Project Beta.md"
+    assert result.exit_code == 0
+    assert '"created_page": true' in result.stdout
+    assert page_path.read_text(encoding="utf-8") == "# Project Beta\n\n- Created from capture\n"
+
+
+def test_capture_task_writes_todo_to_journal(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "capture",
+            "task",
+            "--graph",
+            str(graph),
+            "--date",
+            "2026-04-02",
+            "--text",
+            "Follow up with team",
+            "--project",
+            "Project Alpha",
+            "--json",
+        ],
+    )
+
+    journal_path = graph / "journals" / "2026_04_02.md"
+    assert result.exit_code == 0
+    assert '"command": "capture task"' in result.stdout
+    assert journal_path.read_text(encoding="utf-8") == "- TODO Follow up with team [[Project Alpha]]\n"
+
+
 def test_tasks_list_state_filter(runner, fixture_graph: Path) -> None:
     result = runner.invoke(
         app,

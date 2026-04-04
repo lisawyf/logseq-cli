@@ -643,6 +643,47 @@ def test_timeline_topic_respects_date_window_and_limit(runner, tmp_path: Path) -
     assert payload["data"]["entries"][0]["date"] == "2026-04-04"
 
 
+def test_cards_build_topic_json(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "pages" / "MBB.md").write_text("# MBB\n- Evergreen note\n", encoding="utf-8")
+    (graph / "journals" / "2026_04_01.md").write_text("- Reviewed [[MBB]] assumptions\n", encoding="utf-8")
+    (graph / "journals" / "2026_04_05.md").write_text("- TODO Extend MBB analysis #MBB\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["cards", "build", "topic", "MBB", "--graph", str(graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "cards build topic"
+    assert payload["data"]["card_type"] == "knowledge"
+    assert payload["data"]["target_type"] == "topic"
+    assert payload["data"]["title"] == "MBB"
+    assert payload["data"]["match_count"] == 3
+    assert payload["data"]["open_tasks"][0]["state"] == "TODO"
+    assert payload["data"]["summary"].startswith("MBB appears in 3 matched blocks")
+
+
+def test_cards_build_tag_json(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["cards", "build", "tag", "ops", "--graph", str(fixture_graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "cards build tag"
+    assert payload["data"]["target_type"] == "tag"
+    assert payload["data"]["title"] == "#ops"
+    assert payload["data"]["match_count"] == 3
+    assert payload["data"]["source_count"] == 3
+
+
 def test_search_text_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(
         app,

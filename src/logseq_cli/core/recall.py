@@ -51,6 +51,7 @@ def recall_topic(
                 "doc_type": document.doc_type,
                 "line_no": block.line_no,
                 "text": block.text,
+                "todo_state": block.todo_state,
                 "journal_date": document.journal_date.isoformat() if document.journal_date else None,
                 "match_kinds": match_kinds,
                 "score": score,
@@ -155,6 +156,7 @@ def timeline_topic(
                     "path": str(document.path),
                     "line_no": block.line_no,
                     "text": block.text,
+                    "todo_state": block.todo_state,
                     "match_kinds": match_kinds,
                     "score": _score_match(match_kinds, has_todo=block.todo_state is not None),
                 }

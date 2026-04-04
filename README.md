@@ -26,6 +26,8 @@ The current CLI implements these commands:
 - `capture quick`
 - `capture project`
 - `capture task`
+- `cards build topic`
+- `cards build tag`
 - `recall topic`
 - `timeline topic`
 - `summarize daily`
@@ -259,6 +261,18 @@ Show a topic timeline across journals:
 logseq-cli timeline topic "MBB" --graph ~/Documents/Logseq --since 2026-01-01 --json
 ```
 
+Build a topic knowledge card:
+
+```bash
+logseq-cli cards build topic "MBB" --graph ~/Documents/Logseq --json
+```
+
+Build a tag knowledge card:
+
+```bash
+logseq-cli cards build tag "ops" --graph ~/Documents/Logseq --json
+```
+
 ## Graph Resolution
 
 Graph discovery order:
@@ -347,6 +361,7 @@ Stable exit codes:
 - Topic summaries aggregate blocks and tasks by case-insensitive text, tag, or page-ref matches.
 - Topic recall builds a compact evidence pack with top matches, source counts, related tags, related page refs, and optional journal date filtering.
 - Topic timeline focuses on journal history and returns chronologically ordered entries for a topic or tag.
+- Knowledge cards compress recall output into summary, key points, open tasks, and evidence that Claude Code can reuse directly.
 
 ## Known Limitations
 

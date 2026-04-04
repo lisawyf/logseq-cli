@@ -1,7 +1,8 @@
 # Claude Code Skill Pack
 
-这是一套给 Claude Code 用的本地 Logseq 配置包。它不是 MCP，也不是 server，而是基于 Claude Code 官方支持的两种机制:
+这是一套给 Claude Code 用的本地 Logseq 配置包。它不是 MCP，也不是 server，而是基于 Claude Code 官方支持的三种机制:
 
+- `~/.claude/skills/<skill-name>/SKILL.md`
 - `~/.claude/CLAUDE.md`
 - `~/.claude/commands/*.md`
 
@@ -9,6 +10,9 @@
 
 ## 包含内容
 
+- Claude Skill:
+  - [SKILL.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/skills/logseq-kb/SKILL.md)
+  - [commands.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/skills/logseq-kb/references/commands.md)
 - 用户级 memory 片段:
   - [integrations/claude/CLAUDE.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/CLAUDE.md)
 - 用户级 slash commands:
@@ -41,6 +45,12 @@ logseq-cli graph use --graph ~/Documents/Logseq
 
 完成后，重启 Claude Code 或开一个新会话。
 
+你可以在 Claude Code 里直接确认 Skill 是否已加载:
+
+```text
+What Skills are available?
+```
+
 ## 可用命令
 
 - `/logseq-status`
@@ -60,9 +70,15 @@ logseq-cli graph use --graph ~/Documents/Logseq
 
 ## 设计原则
 
+- 官方 Skill 负责自动触发
 - 默认走 `logseq-cli --json`
 - 默认只做小范围检索
 - 默认不直接扫描整个 Logseq graph
 - 默认不直接写入，除非你显式要求 capture
 - 回答时区分“来自 Logseq 的事实”和“模型的推断”
 
+## 官方参考
+
+- Claude Code Agent Skills: [docs.claude.com/en/docs/claude-code/skills](https://docs.claude.com/en/docs/claude-code/skills)
+- Claude Code Slash Commands: [docs.claude.com/en/docs/claude-code/slash-commands](https://docs.claude.com/en/docs/claude-code/slash-commands)
+- Claude Code Memory: [code.claude.com/docs/en/memory](https://code.claude.com/docs/en/memory)

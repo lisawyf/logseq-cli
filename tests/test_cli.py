@@ -684,6 +684,59 @@ def test_cards_build_tag_json(runner, fixture_graph: Path) -> None:
     assert payload["data"]["source_count"] == 3
 
 
+def test_cards_build_project_json(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["cards", "build", "project", "OpenClaw", "--graph", str(fixture_graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "cards build project"
+    assert payload["data"]["target_type"] == "project"
+    assert payload["data"]["title"] == "OpenClaw"
+    assert payload["data"]["source_count"] == 2
+    assert payload["data"]["match_count"] == 5
+    assert payload["data"]["open_tasks"][0]["state"] == "TODO"
+    assert "Gateway Health" in payload["data"]["related_page_refs"]
+
+
+def test_cards_build_project_respects_journal_date_window(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "pages" / "Project Alpha.md").write_text(
+        "# Project Alpha\n\n- TODO Define scope\n- Linked [[Reference Page]]\n",
+        encoding="utf-8",
+    )
+    (graph / "journals" / "2026_04_01.md").write_text("- Reviewed [[Project Alpha]]\n", encoding="utf-8")
+    (graph / "journals" / "2026_04_05.md").write_text("- TODO Follow up [[Project Alpha]]\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "cards",
+            "build",
+            "project",
+            "Project Alpha",
+            "--graph",
+            str(graph),
+            "--since",
+            "2026-04-05",
+            "--json",
+        ],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["data"]["date_span"]["first"] == "2026-04-05"
+    assert payload["data"]["date_span"]["last"] == "2026-04-05"
+    assert payload["data"]["source_count"] == 2
+    assert len(payload["data"]["evidence"]) == 3
+
+
 def test_search_text_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(
         app,

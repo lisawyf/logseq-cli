@@ -27,6 +27,7 @@ The current CLI implements these commands:
 - `capture project`
 - `capture task`
 - `recall topic`
+- `timeline topic`
 - `summarize daily`
 - `summarize weekly`
 - `summarize project`
@@ -252,6 +253,12 @@ Recall a topic across pages and journals:
 logseq-cli recall topic "MBB" --graph ~/Documents/Logseq --since 2026-01-01 --json
 ```
 
+Show a topic timeline across journals:
+
+```bash
+logseq-cli timeline topic "MBB" --graph ~/Documents/Logseq --since 2026-01-01 --json
+```
+
 ## Graph Resolution
 
 Graph discovery order:
@@ -339,6 +346,7 @@ Stable exit codes:
 - Project summaries combine the project page, references to that page, related tasks, and outgoing page refs.
 - Topic summaries aggregate blocks and tasks by case-insensitive text, tag, or page-ref matches.
 - Topic recall builds a compact evidence pack with top matches, source counts, related tags, related page refs, and optional journal date filtering.
+- Topic timeline focuses on journal history and returns chronologically ordered entries for a topic or tag.
 
 ## Known Limitations
 

@@ -12,7 +12,7 @@ from logseq_cli.core.graph import resolve_graph
 from logseq_cli.core.journals import append_to_journal, ensure_journal, list_journals, parse_target_date, read_journal
 from logseq_cli.core.links import backlinks, outgoing
 from logseq_cli.core.pages import append_to_page, append_under_heading, create_page, list_pages, resolve_page
-from logseq_cli.core.recall import parse_date_window, recall_topic
+from logseq_cli.core.recall import parse_date_window, recall_topic, timeline_topic
 from logseq_cli.core.search import search_links, search_tags, search_text
 from logseq_cli.core.stats import graph_stats
 from logseq_cli.core.summaries import summarize_daily, summarize_journal, summarize_project, summarize_topic, summarize_weekly
@@ -29,6 +29,7 @@ links_app = typer.Typer(no_args_is_help=True)
 capture_app = typer.Typer(no_args_is_help=True)
 summarize_app = typer.Typer(no_args_is_help=True)
 recall_app = typer.Typer(no_args_is_help=True)
+timeline_app = typer.Typer(no_args_is_help=True)
 
 app.add_typer(graph_app, name="graph")
 app.add_typer(page_app, name="page")
@@ -39,6 +40,7 @@ app.add_typer(links_app, name="links")
 app.add_typer(capture_app, name="capture")
 app.add_typer(summarize_app, name="summarize")
 app.add_typer(recall_app, name="recall")
+app.add_typer(timeline_app, name="timeline")
 
 GraphOption = Annotated[Path | None, typer.Option("--graph", help="Path to the graph root.")]
 JsonOption = Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")]
@@ -846,3 +848,45 @@ def recall_topic_command(
         typer.echo(f"Topic recall for {data['topic']}")
         typer.echo(f"Sources: {data['source_count']}")
         typer.echo(f"Matches: {data['match_count']}")
+
+
+@timeline_app.command("topic")
+def timeline_topic_command(
+    topic: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    since: Annotated[str | None, typer.Option("--since", help="Include journals on or after YYYY-MM-DD.")] = None,
+    until: Annotated[str | None, typer.Option("--until", help="Include journals on or before YYYY-MM-DD.")] = None,
+    limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum number of timeline entries to return.")] = 50,
+    quiet: QuietOption = False,
+) -> None:
+    command = "timeline topic"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        since_date, until_date = parse_date_window(since=since, until=until)
+        data = timeline_topic(
+            resolved_graph,
+            topic,
+            since=since_date,
+            until=until_date,
+            limit=limit,
+        )
+    except ValueError as error:
+        emit_failure(
+            command,
+            resolved_graph,
+            LogseqCliError(code="INVALID_DATE_RANGE", message=str(error), exit_code=2),
+            json_output,
+        )
+        return
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        typer.echo(f"Topic timeline for {data['topic']}")
+        typer.echo(f"Entries: {data['entry_count']}")
+        typer.echo(f"Journals: {data['journal_count']}")

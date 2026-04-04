@@ -19,3 +19,8 @@ def runner() -> CliRunner:
 @pytest.fixture()
 def fixture_graph() -> Path:
     return Path(__file__).parent / "fixtures" / "sample_graph"
+
+
+@pytest.fixture(autouse=True)
+def isolated_config_path(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("LOGSEQ_CLI_CONFIG_PATH", str(tmp_path / "config.toml"))

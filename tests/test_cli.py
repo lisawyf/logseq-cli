@@ -501,6 +501,80 @@ def test_summarize_topic_json(runner, fixture_graph: Path) -> None:
     assert '"task_count": 3' in result.stdout
 
 
+def test_recall_topic_json(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["recall", "topic", "ops", "--graph", str(fixture_graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "recall topic"
+    assert payload["data"]["recall_type"] == "topic"
+    assert payload["data"]["topic"] == "ops"
+    assert payload["data"]["match_count"] == 3
+    assert payload["data"]["source_count"] == 3
+    assert payload["data"]["task_count"] == 3
+    assert payload["data"]["top_match_count"] == 3
+    assert payload["data"]["related_page_refs"][0]["page"] == "Gateway Health"
+
+
+def test_recall_topic_matches_page_refs_and_date_window(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "pages" / "MBB.md").write_text("# MBB\n- Working notes\n", encoding="utf-8")
+    (graph / "journals" / "2026_04_01.md").write_text("- Reviewed [[MBB]] assumptions\n", encoding="utf-8")
+    (graph / "journals" / "2026_04_05.md").write_text("- TODO Extend MBB analysis #MBB\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "recall",
+            "topic",
+            "MBB",
+            "--graph",
+            str(graph),
+            "--since",
+            "2026-04-03",
+            "--json",
+        ],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["data"]["match_count"] == 2
+    assert payload["data"]["journal_source_count"] == 1
+    assert payload["data"]["first_journal_date"] == "2026-04-05"
+    assert payload["data"]["last_journal_date"] == "2026-04-05"
+    assert payload["data"]["top_matches"][0]["match_kinds"] == ["text", "tag"]
+
+
+def test_recall_topic_invalid_date_window(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "recall",
+            "topic",
+            "ops",
+            "--graph",
+            str(fixture_graph),
+            "--since",
+            "2026-04-05",
+            "--until",
+            "2026-04-01",
+            "--json",
+        ],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 2
+    assert payload["ok"] is False
+    assert payload["errors"][0]["code"] == "INVALID_DATE_RANGE"
+
+
 def test_search_text_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(
         app,

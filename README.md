@@ -468,22 +468,22 @@ Stable exit codes:
 Install on the current machine from the built wheel:
 
 ```bash
-python3 -m pip install dist/logseq_cli-0.1.0-py3-none-any.whl
+python3 -m pip install dist/logseq_cli-0.2.0-py3-none-any.whl
 ```
 
 Upgrade an existing install:
 
 ```bash
-python3 -m pip install --upgrade dist/logseq_cli-0.1.0-py3-none-any.whl
+python3 -m pip install --upgrade dist/logseq_cli-0.2.0-py3-none-any.whl
 ```
 
 Install on another machine:
 
-1. Copy `dist/logseq_cli-0.1.0-py3-none-any.whl` to that machine.
+1. Copy `dist/logseq_cli-0.2.0-py3-none-any.whl` to that machine.
 2. Run:
 
 ```bash
-python3 -m pip install logseq_cli-0.1.0-py3-none-any.whl
+python3 -m pip install logseq_cli-0.2.0-py3-none-any.whl
 ```
 
 If the other machine cannot resolve dependencies from package indexes, you can either install them separately first or use the same Python environment strategy you use locally.

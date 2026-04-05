@@ -1,6 +1,6 @@
 # Release Prep
 
-This project is currently prepared for an initial `0.1.0` local release.
+This project is currently prepared for local release `0.2.0`.
 
 Preferred local release flow:
 
@@ -48,8 +48,8 @@ logseq-cli search tags ops --graph tests/fixtures/sample_graph --json
 
 Expected local artifacts after build:
 
-- `dist/logseq_cli-0.1.0.tar.gz`
-- `dist/logseq_cli-0.1.0-py3-none-any.whl`
+- `dist/logseq_cli-0.2.0.tar.gz`
+- `dist/logseq_cli-0.2.0-py3-none-any.whl`
 
 ## Notes
 

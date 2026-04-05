@@ -77,7 +77,7 @@
 先在你的机器上安装 CLI，然后设置默认 graph。
 
 ```bash
-python3 -m pip install dist/logseq_cli-0.1.0-py3-none-any.whl
+python3 -m pip install dist/logseq_cli-0.2.0-py3-none-any.whl
 logseq-cli graph use --graph ~/Documents/Logseq
 ```
 

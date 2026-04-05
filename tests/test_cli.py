@@ -847,6 +847,31 @@ def test_cards_build_lesson_json(runner, tmp_path: Path) -> None:
     assert payload["data"]["title"] == "Lesson Card: MBB"
 
 
+def test_cards_build_weekly_json(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "journals" / "2026_03_25.md").write_text("- TODO First #ops [[Alpha]]\n", encoding="utf-8")
+    (graph / "journals" / "2026_03_29.md").write_text("- TODO Second #work [[Beta]]\n- Reviewed rollout\n", encoding="utf-8")
+    (graph / "journals" / "2026_03_30.md").write_text("- TODO Outside range\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["cards", "build", "weekly", "--graph", str(graph), "--date", "2026-03-29", "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "cards build weekly"
+    assert payload["data"]["target_type"] == "weekly"
+    assert payload["data"]["journal_count"] == 2
+    assert payload["data"]["task_count"] == 2
+    assert payload["data"]["open_tasks"][0]["state"] == "TODO"
+    assert payload["data"]["title"] == "Weekly Card: 2026-03-23 to 2026-03-29"
+
+
 def test_decisions_list_json_extracts_reasons(runner, tmp_path: Path) -> None:
     graph = tmp_path / "graph"
     (graph / "pages").mkdir(parents=True)

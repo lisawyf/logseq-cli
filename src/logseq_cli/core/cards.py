@@ -5,9 +5,11 @@ from datetime import date
 from logseq_cli.core.decisions import list_decisions
 from logseq_cli.core.graph import iter_documents
 from logseq_cli.core.graph import Graph
+from logseq_cli.core.journals import read_journal
 from logseq_cli.core.lessons import list_lessons
 from logseq_cli.core.pages import build_document, normalize_page_name, resolve_page
 from logseq_cli.core.recall import recall_topic
+from logseq_cli.core.summaries import summarize_weekly
 from logseq_cli.core.tasks import list_tasks
 
 OPEN_TASK_STATES = {"TODO", "DOING", "WAITING", "NOW", "LATER"}
@@ -266,6 +268,99 @@ def build_lesson_card(
         "takeaway_points": takeaway_points[:5],
         "top_sources": top_sources,
         "evidence": lessons,
+    }
+
+
+def build_weekly_card(
+    graph: Graph,
+    target_date: date,
+    *,
+    evidence_limit: int = 8,
+) -> dict[str, object]:
+    weekly = summarize_weekly(graph, target_date)
+    start_date = date.fromisoformat(str(weekly["start_date"]))
+    end_date = date.fromisoformat(str(weekly["end_date"]))
+
+    evidence: list[dict[str, object]] = []
+    for journal_summary in list(weekly["journals"]):
+        journal_date = date.fromisoformat(str(journal_summary["journal_date"]))
+        document = read_journal(graph, journal_date)
+        for block in document.blocks:
+            evidence.append(
+                {
+                    "title": document.title,
+                    "path": str(document.path),
+                    "doc_type": document.doc_type,
+                    "line_no": block.line_no,
+                    "text": block.text,
+                    "journal_date": document.journal_date.isoformat() if document.journal_date else None,
+                    "todo_state": block.todo_state,
+                    "tags": block.tags,
+                    "page_refs": block.page_refs,
+                }
+            )
+
+    evidence.sort(
+        key=lambda item: (
+            str(item["journal_date"] or ""),
+            1 if item["todo_state"] in OPEN_TASK_STATES else 0,
+            int(item["line_no"]),
+        ),
+        reverse=True,
+    )
+
+    weekly_tasks = []
+    for task in list_tasks(graph):
+        if task.doc_type != "journal":
+            continue
+        journal_date = _date_from_title(task.title)
+        if journal_date is None or journal_date < start_date or journal_date > end_date:
+            continue
+        if task.state not in OPEN_TASK_STATES:
+            continue
+        weekly_tasks.append(
+            {
+                "title": task.title,
+                "path": str(task.path),
+                "doc_type": task.doc_type,
+                "line_no": task.line_no,
+                "state": task.state,
+                "text": task.text,
+            }
+        )
+
+    key_points = _unique_texts(item["text"] for item in evidence)
+    summary = (
+        f"Week ending {weekly['end_date']} covers {weekly['journal_count']} journals, "
+        f"{weekly['block_count']} blocks, and {weekly['task_count']} tasks. "
+        f"Open tasks: {len(weekly_tasks)}."
+    )
+
+    return {
+        "card_type": "knowledge",
+        "target_type": "weekly",
+        "target": weekly["end_date"],
+        "title": f"Weekly Card: {weekly['start_date']} to {weekly['end_date']}",
+        "summary": summary,
+        "date_window": {
+            "since": weekly["start_date"],
+            "until": weekly["end_date"],
+        },
+        "date_span": {
+            "first": weekly["start_date"],
+            "last": weekly["end_date"],
+        },
+        "journal_count": weekly["journal_count"],
+        "source_count": weekly["journal_count"],
+        "match_count": weekly["block_count"],
+        "task_count": weekly["task_count"],
+        "task_states": weekly["task_states"],
+        "key_points": key_points[:5],
+        "open_tasks": weekly_tasks[:5],
+        "related_tags": list(weekly["tags"])[:8],
+        "related_page_refs": list(weekly["page_refs"])[:8],
+        "top_sources": list(weekly["journals"])[:5],
+        "evidence": evidence[:evidence_limit],
     }
 
 

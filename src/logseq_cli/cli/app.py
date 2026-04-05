@@ -7,7 +7,7 @@ import typer
 
 from logseq_cli.core.decisions import list_decisions
 from logseq_cli.core.lessons import list_lessons
-from logseq_cli.core.cards import build_decision_card, build_lesson_card, build_project_card, build_tag_card, build_topic_card
+from logseq_cli.core.cards import build_decision_card, build_lesson_card, build_project_card, build_tag_card, build_topic_card, build_weekly_card
 from logseq_cli.core.capture import capture_project, capture_task
 from logseq_cli.core.config import get_config_path, resolve_alias_terms, set_default_graph_path
 from logseq_cli.core.errors import LogseqCliError
@@ -1124,6 +1124,36 @@ def cards_build_lesson_command(
             json_output,
         )
         return
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        typer.echo(data["title"])
+        typer.echo(data["summary"])
+
+
+@cards_build_app.command("weekly")
+def cards_build_weekly_command(
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    date_value: Annotated[str | None, typer.Option("--date", help="Anchor date as YYYY-MM-DD.")] = None,
+    today: Annotated[bool, typer.Option("--today", help="Use today's date as the weekly anchor.")] = False,
+    evidence_limit: Annotated[int, typer.Option("--evidence-limit", min=1, help="Maximum number of evidence items to use.")] = 8,
+    quiet: QuietOption = False,
+) -> None:
+    command = "cards build weekly"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        target_date = parse_target_date(target_date=date_value, today=today)
+        data = build_weekly_card(
+            resolved_graph,
+            target_date,
+            evidence_limit=evidence_limit,
+        )
     except LogseqCliError as error:
         emit_failure(command, resolved_graph, error, json_output)
         return

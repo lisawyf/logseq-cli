@@ -30,6 +30,7 @@ The current CLI implements these commands:
 - `lessons list`
 - `cards build decision`
 - `cards build lesson`
+- `cards build weekly`
 - `cards build project`
 - `cards build topic`
 - `cards build tag`
@@ -314,6 +315,12 @@ Build a lesson card:
 logseq-cli cards build lesson "MBB" --graph ~/Documents/Logseq --json
 ```
 
+Build a weekly card:
+
+```bash
+logseq-cli cards build weekly --graph ~/Documents/Logseq --date 2026-03-29 --json
+```
+
 ## Graph Resolution
 
 Graph discovery order:
@@ -424,6 +431,7 @@ Stable exit codes:
 - Project cards combine the project page, related references, open tasks, related links, and compact evidence for project-oriented Q&A.
 - Decision cards compress extracted decision records and reason snippets into an answer-ready decision brief.
 - Lesson cards compress extracted lessons and takeaways into an answer-ready best-practices brief.
+- Weekly cards compress a 7-day journal window into key points, open tasks, related refs, and evidence blocks.
 - Decision extraction uses local heuristics to pull likely decisions plus inline or child-block reason snippets across pages and journals.
 - Lesson extraction uses local heuristics to pull best practices, pitfalls, notes-to-self, and experience snippets across pages and journals.
 

@@ -808,6 +808,82 @@ def test_decisions_list_invalid_scope(runner, fixture_graph: Path) -> None:
     assert payload["errors"][0]["code"] == "INVALID_SCOPE"
 
 
+def test_lessons_list_json_extracts_takeaways(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "pages" / "Ops.md").write_text(
+        "# Ops\n\n- Lesson learned: always flush the queue before restart\n  - Otherwise jobs can be replayed twice\n",
+        encoding="utf-8",
+    )
+    (graph / "journals" / "2026_04_05.md").write_text(
+        "- 经验：MBB 复盘时要先整理标签，否则很难聚合\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["lessons", "list", "--graph", str(graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "lessons list"
+    assert payload["data"]["count"] == 2
+    assert payload["data"]["returned_count"] == 2
+    takeaway_blob = "\n".join(
+        snippet
+        for item in payload["data"]["lessons"]
+        for snippet in item["takeaway_snippets"]
+    )
+    assert "flush the queue before restart" in takeaway_blob
+    assert "整理标签" in takeaway_blob
+
+
+def test_lessons_list_query_and_date_window(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "journals" / "2026_04_01.md").write_text("- Tip: MBB notes should include a stable tag\n", encoding="utf-8")
+    (graph / "journals" / "2026_04_06.md").write_text("- Best practice: MBB reviews should link the owning page\n", encoding="utf-8")
+    (graph / "pages" / "MBB.md").write_text("# MBB\n- 注意：MBB 页面要保留固定标题\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "lessons",
+            "list",
+            "MBB",
+            "--graph",
+            str(graph),
+            "--since",
+            "2026-04-05",
+            "--json",
+        ],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["data"]["count"] == 2
+    assert payload["data"]["lessons"][0]["journal_date"] == "2026-04-06"
+
+
+def test_lessons_list_invalid_scope(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["lessons", "list", "--graph", str(fixture_graph), "--scope", "invalid", "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 2
+    assert payload["ok"] is False
+    assert payload["errors"][0]["code"] == "INVALID_SCOPE"
+
+
 def test_search_text_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(
         app,

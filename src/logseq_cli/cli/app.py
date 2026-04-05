@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 
 from logseq_cli.core.decisions import list_decisions
+from logseq_cli.core.lessons import list_lessons
 from logseq_cli.core.cards import build_project_card, build_tag_card, build_topic_card
 from logseq_cli.core.capture import capture_project, capture_task
 from logseq_cli.core.config import get_config_path, set_default_graph_path
@@ -35,6 +36,7 @@ timeline_app = typer.Typer(no_args_is_help=True)
 cards_app = typer.Typer(no_args_is_help=True)
 cards_build_app = typer.Typer(no_args_is_help=True)
 decisions_app = typer.Typer(no_args_is_help=True)
+lessons_app = typer.Typer(no_args_is_help=True)
 
 app.add_typer(graph_app, name="graph")
 app.add_typer(page_app, name="page")
@@ -48,6 +50,7 @@ app.add_typer(recall_app, name="recall")
 app.add_typer(timeline_app, name="timeline")
 app.add_typer(cards_app, name="cards")
 app.add_typer(decisions_app, name="decisions")
+app.add_typer(lessons_app, name="lessons")
 cards_app.add_typer(cards_build_app, name="build")
 
 GraphOption = Annotated[Path | None, typer.Option("--graph", help="Path to the graph root.")]
@@ -1063,4 +1066,47 @@ def decisions_list_command(
         emit_json(make_success(command, resolved_graph, data))
     elif not quiet:
         for item in data["decisions"]:
+            typer.echo(f"{item['title']}:{item['line_no']} {item['text']}")
+
+
+@lessons_app.command("list")
+def lessons_list_command(
+    query: Annotated[str | None, typer.Argument(help="Optional topic, tag, or text filter.")] = None,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    scope: Annotated[str, typer.Option("--scope", help="Comma-separated scopes: pages,journals")] = "pages,journals",
+    since: Annotated[str | None, typer.Option("--since", help="Include journals on or after YYYY-MM-DD.")] = None,
+    until: Annotated[str | None, typer.Option("--until", help="Include journals on or before YYYY-MM-DD.")] = None,
+    limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum number of lessons to return.")] = 20,
+    quiet: QuietOption = False,
+) -> None:
+    command = "lessons list"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        since_date, until_date = parse_date_window(since=since, until=until)
+        data = list_lessons(
+            resolved_graph,
+            query=query,
+            scope=scope,
+            since=since_date,
+            until=until_date,
+            limit=limit,
+        )
+    except ValueError as error:
+        emit_failure(
+            command,
+            resolved_graph,
+            LogseqCliError(code="INVALID_DATE_RANGE", message=str(error), exit_code=2),
+            json_output,
+        )
+        return
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        for item in data["lessons"]:
             typer.echo(f"{item['title']}:{item['line_no']} {item['text']}")

@@ -31,6 +31,7 @@ Use the narrowest command that matches the task.
    - `summarize weekly`
    - `journal summarize`
    - `decisions list`
+   - `lessons list`
 2. Open work:
    - `tasks list`
 3. Search:
@@ -52,6 +53,7 @@ For questions like:
 - "Have I dealt with this ops problem before?"
 - "What are my open follow-ups?"
 - "Why did I choose this approach before?"
+- "What did I learn from this before?"
 
 do this:
 

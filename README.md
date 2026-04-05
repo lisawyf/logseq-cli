@@ -27,6 +27,7 @@ The current CLI implements these commands:
 - `capture project`
 - `capture task`
 - `decisions list`
+- `lessons list`
 - `cards build project`
 - `cards build topic`
 - `cards build tag`
@@ -287,6 +288,12 @@ List decision records and extracted reasons:
 logseq-cli decisions list "MBB" --graph ~/Documents/Logseq --since 2026-01-01 --json
 ```
 
+List lessons, pitfalls, and best practices:
+
+```bash
+logseq-cli lessons list "MBB" --graph ~/Documents/Logseq --since 2026-01-01 --json
+```
+
 ## Graph Resolution
 
 Graph discovery order:
@@ -378,6 +385,7 @@ Stable exit codes:
 - Knowledge cards compress recall output into summary, key points, open tasks, and evidence that Claude Code can reuse directly.
 - Project cards combine the project page, related references, open tasks, related links, and compact evidence for project-oriented Q&A.
 - Decision extraction uses local heuristics to pull likely decisions plus inline or child-block reason snippets across pages and journals.
+- Lesson extraction uses local heuristics to pull best practices, pitfalls, notes-to-self, and experience snippets across pages and journals.
 
 ## Known Limitations
 

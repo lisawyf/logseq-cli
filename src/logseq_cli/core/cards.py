@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from datetime import date
 
+from logseq_cli.core.decisions import list_decisions
 from logseq_cli.core.graph import iter_documents
 from logseq_cli.core.graph import Graph
+from logseq_cli.core.lessons import list_lessons
 from logseq_cli.core.pages import build_document, normalize_page_name, resolve_page
 from logseq_cli.core.recall import recall_topic
 from logseq_cli.core.tasks import list_tasks
@@ -167,6 +169,106 @@ def build_project_card(
     }
 
 
+def build_decision_card(
+    graph: Graph,
+    query: str,
+    *,
+    alias_terms: list[str] | None = None,
+    since: date | None = None,
+    until: date | None = None,
+    evidence_limit: int = 8,
+) -> dict[str, object]:
+    decision_data = list_decisions(
+        graph,
+        query=query,
+        alias_terms=alias_terms,
+        since=since,
+        until=until,
+        limit=evidence_limit,
+    )
+    decisions = list(decision_data["decisions"])
+    reason_points = _unique_texts(
+        snippet
+        for item in decisions
+        for snippet in item["reason_snippets"]
+    )
+    key_points = _unique_texts(item["text"] for item in decisions)
+    top_sources = _top_sources_from_rows(decisions)
+    date_span = _date_span_from_rows(decisions)
+    date_phrase = _date_phrase(date_span["first"], date_span["last"])
+    summary = (
+        f"Found {decision_data['count']} decision records for {query}"
+        f"{date_phrase}. Reason snippets: {len(reason_points)}."
+    )
+
+    return {
+        "card_type": "knowledge",
+        "target_type": "decision",
+        "target": query,
+        "title": f"Decision Card: {query}",
+        "summary": summary,
+        "expanded_terms": decision_data["expanded_terms"],
+        "date_window": decision_data["date_window"],
+        "date_span": date_span,
+        "source_count": len(top_sources),
+        "match_count": decision_data["count"],
+        "key_points": key_points[:5],
+        "reason_points": reason_points[:5],
+        "top_sources": top_sources,
+        "evidence": decisions,
+    }
+
+
+def build_lesson_card(
+    graph: Graph,
+    query: str,
+    *,
+    alias_terms: list[str] | None = None,
+    since: date | None = None,
+    until: date | None = None,
+    evidence_limit: int = 8,
+) -> dict[str, object]:
+    lesson_data = list_lessons(
+        graph,
+        query=query,
+        alias_terms=alias_terms,
+        since=since,
+        until=until,
+        limit=evidence_limit,
+    )
+    lessons = list(lesson_data["lessons"])
+    takeaway_points = _unique_texts(
+        snippet
+        for item in lessons
+        for snippet in item["takeaway_snippets"]
+    )
+    key_points = _unique_texts(item["text"] for item in lessons)
+    top_sources = _top_sources_from_rows(lessons)
+    date_span = _date_span_from_rows(lessons)
+    date_phrase = _date_phrase(date_span["first"], date_span["last"])
+    summary = (
+        f"Found {lesson_data['count']} lesson records for {query}"
+        f"{date_phrase}. Takeaways: {len(takeaway_points)}."
+    )
+
+    return {
+        "card_type": "knowledge",
+        "target_type": "lesson",
+        "target": query,
+        "title": f"Lesson Card: {query}",
+        "summary": summary,
+        "expanded_terms": lesson_data["expanded_terms"],
+        "date_window": lesson_data["date_window"],
+        "date_span": date_span,
+        "source_count": len(top_sources),
+        "match_count": lesson_data["count"],
+        "key_points": key_points[:5],
+        "takeaway_points": takeaway_points[:5],
+        "top_sources": top_sources,
+        "evidence": lessons,
+    }
+
+
 def _build_card_from_recall(recall: dict[str, object], *, target_type: str, title: str) -> dict[str, object]:
     top_matches = list(recall["top_matches"])
     open_tasks = [
@@ -239,6 +341,30 @@ def _unique_texts(values) -> list[str]:
         seen.add(normalized)
         result.append(value)
     return result
+
+
+def _top_sources_from_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    sources: dict[str, dict[str, object]] = {}
+    counts: dict[str, int] = {}
+    for row in rows:
+        key = str(row["path"])
+        counts[key] = counts.get(key, 0) + 1
+        sources[key] = {
+            "title": row["title"],
+            "path": row["path"],
+            "doc_type": row["doc_type"],
+            "journal_date": row["journal_date"],
+            "match_count": counts[key],
+        }
+    return list(sources.values())[:5]
+
+
+def _date_span_from_rows(rows: list[dict[str, object]]) -> dict[str, str | None]:
+    dates = [str(row["journal_date"]) for row in rows if row["journal_date"]]
+    return {
+        "first": min(dates) if dates else None,
+        "last": max(dates) if dates else None,
+    }
 
 
 def _date_phrase(first_date: str | None, last_date: str | None) -> str:

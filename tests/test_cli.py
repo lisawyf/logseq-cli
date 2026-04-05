@@ -789,6 +789,64 @@ def test_cards_build_project_respects_journal_date_window(runner, tmp_path: Path
     assert len(payload["data"]["evidence"]) == 3
 
 
+def test_cards_build_decision_json(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "journals" / "2026_04_05.md").write_text(
+        "- Final decision: keep the MBB checklist because it improves review quality\n",
+        encoding="utf-8",
+    )
+    (graph / "pages" / "MBB.md").write_text(
+        "# MBB\n- Decided to standardize on MBB tags because search was too noisy\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["cards", "build", "decision", "MBB", "--graph", str(graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "cards build decision"
+    assert payload["data"]["target_type"] == "decision"
+    assert payload["data"]["match_count"] == 2
+    assert payload["data"]["reason_points"]
+    assert payload["data"]["title"] == "Decision Card: MBB"
+
+
+def test_cards_build_lesson_json(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "journals" / "2026_04_05.md").write_text(
+        "- Best practice: MBB reviews should link the owning page\n",
+        encoding="utf-8",
+    )
+    (graph / "pages" / "MBB.md").write_text(
+        "# MBB\n- 经验：MBB 页面要保留固定标题\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["cards", "build", "lesson", "MBB", "--graph", str(graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "cards build lesson"
+    assert payload["data"]["target_type"] == "lesson"
+    assert payload["data"]["match_count"] == 2
+    assert payload["data"]["takeaway_points"]
+    assert payload["data"]["title"] == "Lesson Card: MBB"
+
+
 def test_decisions_list_json_extracts_reasons(runner, tmp_path: Path) -> None:
     graph = tmp_path / "graph"
     (graph / "pages").mkdir(parents=True)

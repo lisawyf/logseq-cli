@@ -104,6 +104,12 @@ logseq-cli decisions list "MBB" --json
 logseq-cli decisions list "OpenClaw" --since 2026-01-01 --until 2026-04-01 --json
 ```
 
+- Decision card for a topic:
+
+```bash
+logseq-cli cards build decision "MBB" --json
+```
+
 ## Lessons And Best Practices
 
 - Lessons for a topic:
@@ -116,6 +122,12 @@ logseq-cli lessons list "MBB" --json
 
 ```bash
 logseq-cli lessons list "ops" --since 2026-01-01 --until 2026-04-01 --json
+```
+
+- Lesson card for a topic:
+
+```bash
+logseq-cli cards build lesson "MBB" --json
 ```
 
 ## Safe Write-Back

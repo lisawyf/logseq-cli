@@ -7,7 +7,7 @@ import typer
 
 from logseq_cli.core.decisions import list_decisions
 from logseq_cli.core.lessons import list_lessons
-from logseq_cli.core.cards import build_project_card, build_tag_card, build_topic_card
+from logseq_cli.core.cards import build_decision_card, build_lesson_card, build_project_card, build_tag_card, build_topic_card
 from logseq_cli.core.capture import capture_project, capture_task
 from logseq_cli.core.config import get_config_path, resolve_alias_terms, set_default_graph_path
 from logseq_cli.core.errors import LogseqCliError
@@ -1026,6 +1026,92 @@ def cards_build_project_command(
         data = build_project_card(
             resolved_graph,
             project_name,
+            since=since_date,
+            until=until_date,
+            evidence_limit=evidence_limit,
+        )
+    except ValueError as error:
+        emit_failure(
+            command,
+            resolved_graph,
+            LogseqCliError(code="INVALID_DATE_RANGE", message=str(error), exit_code=2),
+            json_output,
+        )
+        return
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        typer.echo(data["title"])
+        typer.echo(data["summary"])
+
+
+@cards_build_app.command("decision")
+def cards_build_decision_command(
+    query: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    since: Annotated[str | None, typer.Option("--since", help="Include journals on or after YYYY-MM-DD.")] = None,
+    until: Annotated[str | None, typer.Option("--until", help="Include journals on or before YYYY-MM-DD.")] = None,
+    evidence_limit: Annotated[int, typer.Option("--evidence-limit", min=1, help="Maximum number of evidence items to use.")] = 8,
+    quiet: QuietOption = False,
+) -> None:
+    command = "cards build decision"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(query)
+        since_date, until_date = parse_date_window(since=since, until=until)
+        data = build_decision_card(
+            resolved_graph,
+            query,
+            alias_terms=expanded_terms,
+            since=since_date,
+            until=until_date,
+            evidence_limit=evidence_limit,
+        )
+    except ValueError as error:
+        emit_failure(
+            command,
+            resolved_graph,
+            LogseqCliError(code="INVALID_DATE_RANGE", message=str(error), exit_code=2),
+            json_output,
+        )
+        return
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        typer.echo(data["title"])
+        typer.echo(data["summary"])
+
+
+@cards_build_app.command("lesson")
+def cards_build_lesson_command(
+    query: str,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    since: Annotated[str | None, typer.Option("--since", help="Include journals on or after YYYY-MM-DD.")] = None,
+    until: Annotated[str | None, typer.Option("--until", help="Include journals on or before YYYY-MM-DD.")] = None,
+    evidence_limit: Annotated[int, typer.Option("--evidence-limit", min=1, help="Maximum number of evidence items to use.")] = 8,
+    quiet: QuietOption = False,
+) -> None:
+    command = "cards build lesson"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(query)
+        since_date, until_date = parse_date_window(since=since, until=until)
+        data = build_lesson_card(
+            resolved_graph,
+            query,
+            alias_terms=expanded_terms,
             since=since_date,
             until=until_date,
             evidence_limit=evidence_limit,

@@ -26,12 +26,14 @@ def search_text(
     graph: Graph,
     query: str,
     *,
+    alias_terms: list[str] | None = None,
     scope: str = "pages,journals",
     limit: int = 20,
     case_sensitive: bool = False,
 ) -> list[SearchHit]:
     selected = parse_scope(scope)
-    query_text = query if case_sensitive else query.lower()
+    query_terms = alias_terms or [query]
+    match_terms = query_terms if case_sensitive else [term.lower() for term in query_terms]
     hits: list[SearchHit] = []
 
     for doc_type, directory in (("page", graph.pages_dir), ("journal", graph.journals_dir)):
@@ -43,7 +45,12 @@ def search_text(
             document = load_document(path, doc_type)
             for line_no, line in enumerate(document.content.splitlines(), start=1):
                 haystack = line if case_sensitive else line.lower()
-                if query_text in haystack:
+                matched_terms = [
+                    term
+                    for term, lookup in zip(query_terms, match_terms, strict=False)
+                    if lookup in haystack
+                ]
+                if matched_terms:
                     hits.append(
                         SearchHit(
                             path=document.path,
@@ -52,6 +59,7 @@ def search_text(
                             line_no=line_no,
                             snippet=line.strip(),
                             match_text=query,
+                            matched_terms=matched_terms,
                         )
                     )
                     if len(hits) >= limit:
@@ -64,6 +72,7 @@ def search_links(
     graph: Graph,
     target: str,
     *,
+    alias_terms: list[str] | None = None,
     scope: str = "pages,journals",
     limit: int = 20,
 ) -> list[dict[str, object]]:
@@ -75,7 +84,7 @@ def search_links(
         )
 
     selected = parse_scope(scope)
-    normalized_target = normalize_page_name(target)
+    normalized_targets = {normalize_page_name(term) for term in (alias_terms or [target])}
     hits: list[dict[str, object]] = []
 
     for doc_type, directory in (("page", graph.pages_dir), ("journal", graph.journals_dir)):
@@ -86,7 +95,7 @@ def search_links(
         for path in iter_documents(directory):
             document = load_document(path, doc_type)
             for block in document.blocks:
-                matched_refs = [ref for ref in block.page_refs if normalize_page_name(ref) == normalized_target]
+                matched_refs = [ref for ref in block.page_refs if normalize_page_name(ref) in normalized_targets]
                 if not matched_refs:
                     continue
                 hits.append(
@@ -109,11 +118,12 @@ def search_tags(
     graph: Graph,
     tag: str,
     *,
+    alias_terms: list[str] | None = None,
     scope: str = "pages,journals",
     limit: int = 20,
 ) -> list[dict[str, object]]:
-    normalized_tag = tag.strip().lstrip("#").casefold()
-    if not normalized_tag:
+    normalized_tags = {item.strip().lstrip("#").casefold() for item in (alias_terms or [tag]) if item.strip()}
+    if not normalized_tags:
         raise LogseqCliError(
             code="INVALID_QUERY",
             message="Search query must not be empty.",
@@ -131,7 +141,7 @@ def search_tags(
         for path in iter_documents(directory):
             document = load_document(path, doc_type)
             for block in document.blocks:
-                matched_tags = [item for item in block.tags if item.casefold() == normalized_tag]
+                matched_tags = [item for item in block.tags if item.casefold() in normalized_tags]
                 if not matched_tags:
                     continue
                 hits.append(

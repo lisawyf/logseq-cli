@@ -15,19 +15,56 @@ def get_config_path() -> Path:
 
 
 def get_default_graph_path() -> Path | None:
-    config_path = get_config_path()
-    if not config_path.exists():
-        return None
-
-    try:
-        data = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError):
-        return None
-
+    data = load_config_data()
     default_graph = data.get("default_graph")
     if not default_graph:
         return None
     return Path(default_graph).expanduser()
+
+
+def load_config_data() -> dict[str, object]:
+    config_path = get_config_path()
+    if not config_path.exists():
+        return {}
+
+    try:
+        return tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
+
+
+def resolve_alias_terms(query: str) -> list[str]:
+    clean_query = query.strip()
+    if not clean_query:
+        return []
+
+    aliases_section = load_config_data().get("aliases")
+    if not isinstance(aliases_section, dict):
+        return [clean_query]
+
+    normalized_query = clean_query.casefold()
+    matched_groups: list[list[str]] = []
+    for key, value in aliases_section.items():
+        if not isinstance(key, str):
+            continue
+        terms = _alias_group_terms(key, value)
+        normalized_terms = {term.casefold() for term in terms}
+        if normalized_query in normalized_terms:
+            matched_groups.append(terms)
+
+    if not matched_groups:
+        return [clean_query]
+
+    merged: list[str] = []
+    seen: set[str] = set()
+    for group in matched_groups:
+        for term in group:
+            normalized = term.casefold()
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            merged.append(term)
+    return merged
 
 
 def set_default_graph_path(graph_path: Path) -> Path:
@@ -60,3 +97,24 @@ def set_default_graph_path(graph_path: Path) -> Path:
     content = "\n".join(updated_lines).rstrip() + "\n"
     config_path.write_text(content, encoding="utf-8")
     return config_path
+
+
+def _alias_group_terms(key: str, value: object) -> list[str]:
+    terms = [key]
+    if isinstance(value, str):
+        terms.append(value)
+    elif isinstance(value, list):
+        terms.extend(item for item in value if isinstance(item, str))
+
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for term in terms:
+        normalized = term.strip()
+        if not normalized:
+            continue
+        folded = normalized.casefold()
+        if folded in seen:
+            continue
+        seen.add(folded)
+        cleaned.append(normalized)
+    return cleaned

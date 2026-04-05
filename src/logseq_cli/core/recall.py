@@ -20,12 +20,14 @@ def recall_topic(
     graph: Graph,
     topic: str,
     *,
+    alias_terms: list[str] | None = None,
     since: date | None = None,
     until: date | None = None,
     limit: int = 10,
 ) -> dict[str, object]:
-    normalized_topic = topic.strip().lstrip("#").casefold()
-    normalized_page = normalize_page_name(topic)
+    expanded_terms = alias_terms or [topic]
+    normalized_topics = {item.strip().lstrip("#").casefold() for item in expanded_terms if item.strip()}
+    normalized_pages = {normalize_page_name(item) for item in expanded_terms if item.strip()}
 
     matches: list[dict[str, object]] = []
     source_counts: Counter[str] = Counter()
@@ -40,7 +42,7 @@ def recall_topic(
             continue
 
         for block in document.blocks:
-            match_kinds = _match_kinds(block.text, block.tags, block.page_refs, normalized_topic, normalized_page)
+            match_kinds = _match_kinds(block.text, block.tags, block.page_refs, normalized_topics, normalized_pages)
             if not match_kinds:
                 continue
 
@@ -68,10 +70,10 @@ def recall_topic(
             }
 
             for tag in block.tags:
-                if tag.casefold() != normalized_topic:
+                if tag.casefold() not in normalized_topics:
                     related_tags[tag] += 1
             for ref in block.page_refs:
-                if normalize_page_name(ref) != normalized_page:
+                if normalize_page_name(ref) not in normalized_pages:
                     related_page_refs[ref] += 1
             if block.todo_state:
                 task_states.update([block.todo_state])
@@ -91,7 +93,8 @@ def recall_topic(
     return {
         "recall_type": "topic",
         "topic": topic,
-        "normalized_topic": normalized_topic,
+        "normalized_topic": topic.strip().lstrip("#").casefold(),
+        "expanded_terms": expanded_terms,
         "date_window": {
             "since": since.isoformat() if since else None,
             "until": until.isoformat() if until else None,
@@ -116,12 +119,14 @@ def timeline_topic(
     graph: Graph,
     topic: str,
     *,
+    alias_terms: list[str] | None = None,
     since: date | None = None,
     until: date | None = None,
     limit: int = 50,
 ) -> dict[str, object]:
-    normalized_topic = topic.strip().lstrip("#").casefold()
-    normalized_page = normalize_page_name(topic)
+    expanded_terms = alias_terms or [topic]
+    normalized_topics = {item.strip().lstrip("#").casefold() for item in expanded_terms if item.strip()}
+    normalized_pages = {normalize_page_name(item) for item in expanded_terms if item.strip()}
 
     entries: list[dict[str, object]] = []
     date_counts: Counter[str] = Counter()
@@ -134,17 +139,17 @@ def timeline_topic(
             continue
 
         for block in document.blocks:
-            match_kinds = _match_kinds(block.text, block.tags, block.page_refs, normalized_topic, normalized_page)
+            match_kinds = _match_kinds(block.text, block.tags, block.page_refs, normalized_topics, normalized_pages)
             if not match_kinds:
                 continue
 
             journal_date = document.journal_date.isoformat() if document.journal_date else None
             date_counts.update([journal_date or ""])
             for tag in block.tags:
-                if tag.casefold() != normalized_topic:
+                if tag.casefold() not in normalized_topics:
                     related_tags[tag] += 1
             for ref in block.page_refs:
-                if normalize_page_name(ref) != normalized_page:
+                if normalize_page_name(ref) not in normalized_pages:
                     related_page_refs[ref] += 1
             if block.todo_state:
                 task_states.update([block.todo_state])
@@ -167,7 +172,8 @@ def timeline_topic(
     return {
         "timeline_type": "topic",
         "topic": topic,
-        "normalized_topic": normalized_topic,
+        "normalized_topic": topic.strip().lstrip("#").casefold(),
+        "expanded_terms": expanded_terms,
         "date_window": {
             "since": since.isoformat() if since else None,
             "until": until.isoformat() if until else None,
@@ -221,15 +227,16 @@ def _match_kinds(
     text: str,
     tags: list[str],
     page_refs: list[str],
-    normalized_topic: str,
-    normalized_page: str,
+    normalized_topics: set[str],
+    normalized_pages: set[str],
 ) -> list[str]:
     kinds: list[str] = []
-    if normalized_topic in text.casefold():
+    haystack = text.casefold()
+    if any(item in haystack for item in normalized_topics):
         kinds.append("text")
-    if normalized_topic in {tag.casefold() for tag in tags}:
+    if normalized_topics.intersection({tag.casefold() for tag in tags}):
         kinds.append("tag")
-    if normalized_page in {normalize_page_name(ref) for ref in page_refs}:
+    if normalized_pages.intersection({normalize_page_name(ref) for ref in page_refs}):
         kinds.append("page_ref")
     return kinds
 

@@ -9,7 +9,7 @@ from logseq_cli.core.decisions import list_decisions
 from logseq_cli.core.lessons import list_lessons
 from logseq_cli.core.cards import build_project_card, build_tag_card, build_topic_card
 from logseq_cli.core.capture import capture_project, capture_task
-from logseq_cli.core.config import get_config_path, set_default_graph_path
+from logseq_cli.core.config import get_config_path, resolve_alias_terms, set_default_graph_path
 from logseq_cli.core.errors import LogseqCliError
 from logseq_cli.core.graph import resolve_graph
 from logseq_cli.core.journals import append_to_journal, ensure_journal, list_journals, parse_target_date, read_journal
@@ -18,7 +18,7 @@ from logseq_cli.core.pages import append_to_page, append_under_heading, create_p
 from logseq_cli.core.recall import parse_date_window, recall_topic, timeline_topic
 from logseq_cli.core.search import search_links, search_tags, search_text
 from logseq_cli.core.stats import graph_stats
-from logseq_cli.core.summaries import summarize_daily, summarize_journal, summarize_project, summarize_topic, summarize_weekly
+from logseq_cli.core.summaries import summarize_daily, summarize_journal, summarize_project, summarize_topic, summarize_topic_aliases, summarize_weekly
 from logseq_cli.core.tasks import list_tasks
 from logseq_cli.utils.output import emit_failure, emit_json, make_success
 
@@ -459,9 +459,11 @@ def search_text_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(query)
         hits = search_text(
             resolved_graph,
             query,
+            alias_terms=expanded_terms,
             scope=scope,
             limit=limit,
             case_sensitive=case_sensitive,
@@ -471,7 +473,13 @@ def search_text_command(
         return
 
     if json_output:
-        emit_json(make_success(command, resolved_graph, {"hits": hits, "query": query, "count": len(hits)}))
+        emit_json(
+            make_success(
+                command,
+                resolved_graph,
+                {"hits": hits, "query": query, "expanded_terms": expanded_terms, "count": len(hits)},
+            )
+        )
     elif not quiet:
         for hit in hits:
             typer.echo(f"{hit.path}:{hit.line_no}: {hit.snippet}")
@@ -490,9 +498,11 @@ def search_links_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(target)
         hits = search_links(
             resolved_graph,
             target,
+            alias_terms=expanded_terms,
             scope=scope,
             limit=limit,
         )
@@ -502,6 +512,7 @@ def search_links_command(
 
     data = {
         "target": target,
+        "expanded_terms": expanded_terms,
         "hits": hits,
         "count": len(hits),
     }
@@ -525,9 +536,11 @@ def search_tags_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(tag)
         hits = search_tags(
             resolved_graph,
             tag,
+            alias_terms=expanded_terms,
             scope=scope,
             limit=limit,
         )
@@ -537,6 +550,7 @@ def search_tags_command(
 
     data = {
         "tag": tag.lstrip("#"),
+        "expanded_terms": expanded_terms,
         "hits": hits,
         "count": len(hits),
     }
@@ -806,7 +820,8 @@ def summarize_topic_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
-        data = summarize_topic(resolved_graph, topic)
+        expanded_terms = resolve_alias_terms(topic)
+        data = summarize_topic_aliases(resolved_graph, topic, alias_terms=expanded_terms)
     except LogseqCliError as error:
         emit_failure(command, resolved_graph, error, json_output)
         return
@@ -833,10 +848,12 @@ def recall_topic_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(topic)
         since_date, until_date = parse_date_window(since=since, until=until)
         data = recall_topic(
             resolved_graph,
             topic,
+            alias_terms=expanded_terms,
             since=since_date,
             until=until_date,
             limit=limit,
@@ -875,10 +892,12 @@ def timeline_topic_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(topic)
         since_date, until_date = parse_date_window(since=since, until=until)
         data = timeline_topic(
             resolved_graph,
             topic,
+            alias_terms=expanded_terms,
             since=since_date,
             until=until_date,
             limit=limit,
@@ -917,10 +936,12 @@ def cards_build_topic_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(topic)
         since_date, until_date = parse_date_window(since=since, until=until)
         data = build_topic_card(
             resolved_graph,
             topic,
+            alias_terms=expanded_terms,
             since=since_date,
             until=until_date,
             evidence_limit=evidence_limit,
@@ -958,10 +979,12 @@ def cards_build_tag_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(tag)
         since_date, until_date = parse_date_window(since=since, until=until)
         data = build_tag_card(
             resolved_graph,
             tag,
+            alias_terms=expanded_terms,
             since=since_date,
             until=until_date,
             evidence_limit=evidence_limit,
@@ -1041,10 +1064,12 @@ def decisions_list_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(query) if query else []
         since_date, until_date = parse_date_window(since=since, until=until)
         data = list_decisions(
             resolved_graph,
             query=query,
+            alias_terms=expanded_terms,
             scope=scope,
             since=since_date,
             until=until_date,
@@ -1084,10 +1109,12 @@ def lessons_list_command(
     resolved_graph = None
     try:
         resolved_graph = resolve_graph(graph)
+        expanded_terms = resolve_alias_terms(query) if query else []
         since_date, until_date = parse_date_window(since=since, until=until)
         data = list_lessons(
             resolved_graph,
             query=query,
+            alias_terms=expanded_terms,
             scope=scope,
             since=since_date,
             until=until_date,

@@ -15,11 +15,12 @@ def build_topic_card(
     graph: Graph,
     topic: str,
     *,
+    alias_terms: list[str] | None = None,
     since: date | None = None,
     until: date | None = None,
     evidence_limit: int = 8,
 ) -> dict[str, object]:
-    recall = recall_topic(graph, topic, since=since, until=until, limit=evidence_limit)
+    recall = recall_topic(graph, topic, alias_terms=alias_terms, since=since, until=until, limit=evidence_limit)
     return _build_card_from_recall(recall, target_type="topic", title=topic)
 
 
@@ -27,12 +28,13 @@ def build_tag_card(
     graph: Graph,
     tag: str,
     *,
+    alias_terms: list[str] | None = None,
     since: date | None = None,
     until: date | None = None,
     evidence_limit: int = 8,
 ) -> dict[str, object]:
     normalized_tag = tag.lstrip("#")
-    recall = recall_topic(graph, normalized_tag, since=since, until=until, limit=evidence_limit)
+    recall = recall_topic(graph, normalized_tag, alias_terms=alias_terms, since=since, until=until, limit=evidence_limit)
     return _build_card_from_recall(recall, target_type="tag", title=f"#{normalized_tag}")
 
 
@@ -210,6 +212,7 @@ def _build_card_from_recall(recall: dict[str, object], *, target_type: str, titl
         "target": recall["topic"],
         "title": title,
         "summary": summary,
+        "expanded_terms": recall["expanded_terms"],
         "date_window": recall["date_window"],
         "date_span": {
             "first": first_date,

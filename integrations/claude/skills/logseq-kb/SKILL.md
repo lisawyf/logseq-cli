@@ -8,6 +8,7 @@ description: Retrieve and capture information in a local Logseq graph through lo
 Use this Skill when the user's local Logseq graph is the relevant source of truth.
 
 Prefer `logseq-cli ... --json` over scanning raw Logseq files. Keep retrieval small and targeted.
+If the user uses acronyms or shorthand such as `MBB`, rely on any configured alias groups from `logseq-cli` config automatically.
 
 ## Preconditions
 

@@ -81,13 +81,14 @@ def list_lessons(
     graph: Graph,
     *,
     query: str | None = None,
+    alias_terms: list[str] | None = None,
     scope: str = "pages,journals",
     since: date | None = None,
     until: date | None = None,
     limit: int = 20,
 ) -> dict[str, object]:
     selected_scopes = parse_scope(scope)
-    normalized_query = _normalize_query(query)
+    normalized_queries = _normalize_queries(alias_terms or ([query] if query else []))
     lessons: list[dict[str, object]] = []
 
     for doc_type, directory in (("page", graph.pages_dir), ("journal", graph.journals_dir)):
@@ -104,7 +105,7 @@ def list_lessons(
             for block in document.blocks:
                 if not _looks_like_lesson(block.text):
                     continue
-                if normalized_query and not _matches_query(block, normalized_query):
+                if normalized_queries and not _matches_query(block, normalized_queries):
                     continue
 
                 takeaway_snippets = _extract_takeaways(block, children_by_parent.get(block.line_no, []))
@@ -129,6 +130,7 @@ def list_lessons(
 
     return {
         "query": query,
+        "expanded_terms": alias_terms or ([query] if query else []),
         "scope": sorted(selected_scopes),
         "date_window": {
             "since": since.isoformat() if since else None,
@@ -144,19 +146,17 @@ def _looks_like_lesson(text: str) -> bool:
     return any(pattern.search(text) for pattern in LESSON_PATTERNS)
 
 
-def _normalize_query(query: str | None) -> str | None:
-    if query is None:
-        return None
-    normalized = query.strip().casefold()
-    return normalized or None
+def _normalize_queries(values: list[str]) -> set[str]:
+    return {value.strip().casefold() for value in values if value and value.strip()}
 
 
-def _matches_query(block: Block, normalized_query: str) -> bool:
-    if normalized_query in block.text.casefold():
+def _matches_query(block: Block, normalized_queries: set[str]) -> bool:
+    haystack = block.text.casefold()
+    if any(query in haystack for query in normalized_queries):
         return True
-    if normalized_query in {tag.casefold() for tag in block.tags}:
+    if normalized_queries.intersection({tag.casefold() for tag in block.tags}):
         return True
-    if normalized_query in {normalize_page_name(ref) for ref in block.page_refs}:
+    if normalized_queries.intersection({normalize_page_name(ref) for ref in block.page_refs}):
         return True
     return False
 

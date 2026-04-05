@@ -55,6 +55,7 @@ class SearchHit(BaseModel):
     line_no: int
     snippet: str
     match_text: str
+    matched_terms: list[str] = Field(default_factory=list)
 
 
 class TaskItem(BaseModel):

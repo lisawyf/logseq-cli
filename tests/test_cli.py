@@ -66,6 +66,35 @@ def test_graph_use_allows_commands_outside_graph(runner, fixture_graph: Path, tm
     assert payload["data"]["count"] == 3
 
 
+def test_search_text_expands_alias_terms(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (tmp_path / "config.toml").write_text(
+        '\n'.join(
+            [
+                'default_graph = "' + str(graph.resolve()) + '"',
+                '',
+                '[aliases]',
+                'MBB = ["Management by blocks", "management-by-blocks"]',
+                '',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (graph / "journals" / "2026_04_05.md").write_text("- Management by blocks is working well\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["search", "text", "MBB", "--graph", str(graph), "--json"])
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["data"]["expanded_terms"] == ["MBB", "Management by blocks", "management-by-blocks"]
+    assert payload["data"]["count"] == 1
+    assert "Management by blocks" in payload["data"]["hits"][0]["matched_terms"]
+
+
 def test_graph_stats_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(app, ["graph", "stats", "--graph", str(fixture_graph), "--json"])
 
@@ -575,6 +604,29 @@ def test_recall_topic_invalid_date_window(runner, fixture_graph: Path) -> None:
     assert payload["errors"][0]["code"] == "INVALID_DATE_RANGE"
 
 
+def test_recall_topic_expands_alias_terms(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (tmp_path / "config.toml").write_text(
+        '[aliases]\nMBB = ["Management by blocks", "management-by-blocks"]\n',
+        encoding="utf-8",
+    )
+    (graph / "journals" / "2026_04_05.md").write_text(
+        "- TODO refine ranking #management-by-blocks\n- Management by blocks is useful here\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["recall", "topic", "MBB", "--graph", str(graph), "--json"])
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["data"]["expanded_terms"] == ["MBB", "Management by blocks", "management-by-blocks"]
+    assert payload["data"]["match_count"] == 2
+
+
 def test_timeline_topic_json(runner, tmp_path: Path) -> None:
     graph = tmp_path / "graph"
     (graph / "pages").mkdir(parents=True)
@@ -796,6 +848,32 @@ def test_decisions_list_query_and_date_window(runner, tmp_path: Path) -> None:
     assert payload["data"]["decisions"][0]["journal_date"] == "2026-04-06"
 
 
+def test_decisions_list_expands_alias_query(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (tmp_path / "config.toml").write_text(
+        '[aliases]\nMBB = ["Management by blocks"]\n',
+        encoding="utf-8",
+    )
+    (graph / "journals" / "2026_04_06.md").write_text(
+        "- Final decision: keep the Management by blocks checklist because it improves review quality\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["decisions", "list", "MBB", "--graph", str(graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["data"]["count"] == 1
+    assert payload["data"]["expanded_terms"] == ["MBB", "Management by blocks"]
+
+
 def test_decisions_list_invalid_scope(runner, fixture_graph: Path) -> None:
     result = runner.invoke(
         app,
@@ -870,6 +948,32 @@ def test_lessons_list_query_and_date_window(runner, tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert payload["data"]["count"] == 2
     assert payload["data"]["lessons"][0]["journal_date"] == "2026-04-06"
+
+
+def test_lessons_list_expands_alias_query(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (tmp_path / "config.toml").write_text(
+        '[aliases]\nMBB = ["Management by blocks"]\n',
+        encoding="utf-8",
+    )
+    (graph / "journals" / "2026_04_06.md").write_text(
+        "- Best practice: Management by blocks reviews should link the owning page\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["lessons", "list", "MBB", "--graph", str(graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["data"]["count"] == 1
+    assert payload["data"]["expanded_terms"] == ["MBB", "Management by blocks"]
 
 
 def test_lessons_list_invalid_scope(runner, fixture_graph: Path) -> None:

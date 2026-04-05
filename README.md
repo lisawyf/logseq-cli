@@ -174,6 +174,12 @@ Search text:
 logseq-cli search text "OpenClaw" --graph ~/Documents/Logseq --scope pages,journals --json
 ```
 
+Search using an alias group:
+
+```bash
+logseq-cli search text "MBB" --graph ~/Documents/Logseq --json
+```
+
 Search page refs:
 
 ```bash
@@ -306,9 +312,26 @@ Optional config example:
 
 ```toml
 default_graph = "/Users/you/Documents/Logseq"
+
+[aliases]
+MBB = ["Management by blocks", "management-by-blocks"]
+OpenClaw = ["Open Claw", "open-claw"]
 ```
 
 After `graph use`, commands can run outside the graph directory as long as no explicit `--graph` overrides it.
+
+Alias groups are expanded automatically in:
+
+- `search text`
+- `search links`
+- `search tags`
+- `summarize topic`
+- `recall topic`
+- `timeline topic`
+- `cards build topic`
+- `cards build tag`
+- `decisions list`
+- `lessons list`
 
 ## JSON Contract
 
@@ -368,6 +391,7 @@ Stable exit codes:
 - Search is plain text substring search with optional `--scope` and `--limit`.
 - Search links matches parsed `[[Page]]` references.
 - Search tags matches parsed Markdown and Org tags.
+- Alias groups from `config.toml` expand query terms across supported search, recall, card, decision, and lesson commands.
 - Task extraction recognizes common Logseq-style TODO states from Markdown bullets and Org headings.
 - Journal list returns journals in descending date order.
 - Journal ensure creates an empty journal file only when missing.

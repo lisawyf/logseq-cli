@@ -158,7 +158,11 @@ def summarize_project(graph: Graph, project_name: str) -> dict[str, object]:
 
 
 def summarize_topic(graph: Graph, topic: str) -> dict[str, object]:
-    normalized_topic = _normalize_topic(topic)
+    return summarize_topic_aliases(graph, topic, alias_terms=[topic])
+
+
+def summarize_topic_aliases(graph: Graph, topic: str, *, alias_terms: list[str]) -> dict[str, object]:
+    normalized_topics = {_normalize_topic(item) for item in alias_terms}
     documents = _iter_all_documents(graph)
 
     matches = []
@@ -169,9 +173,9 @@ def summarize_topic(graph: Graph, topic: str) -> dict[str, object]:
 
     for document in documents:
         for block in document.blocks:
-            matches_topic = _block_matches_topic(block.text, normalized_topic)
-            matches_tag = normalized_topic in {tag.casefold() for tag in block.tags}
-            matches_ref = normalized_topic in {normalize_page_name(ref) for ref in block.page_refs}
+            matches_topic = _block_matches_topic(block.text, normalized_topics)
+            matches_tag = bool(normalized_topics.intersection({tag.casefold() for tag in block.tags}))
+            matches_ref = bool(normalized_topics.intersection({normalize_page_name(ref) for ref in block.page_refs}))
             if not matches_topic and not matches_tag and not matches_ref:
                 continue
 
@@ -197,6 +201,7 @@ def summarize_topic(graph: Graph, topic: str) -> dict[str, object]:
     return {
         "summary_type": "topic",
         "topic": topic,
+        "expanded_terms": alias_terms,
         "source_count": len(source_documents),
         "sources": sorted(source_documents.values(), key=lambda item: item["path"]),
         "match_count": len(matches),
@@ -228,5 +233,6 @@ def _normalize_topic(topic: str) -> str:
     return topic.strip().lstrip("#").casefold()
 
 
-def _block_matches_topic(text: str, normalized_topic: str) -> bool:
-    return normalized_topic in text.casefold()
+def _block_matches_topic(text: str, normalized_topics: set[str]) -> bool:
+    haystack = text.casefold()
+    return any(topic in haystack for topic in normalized_topics)

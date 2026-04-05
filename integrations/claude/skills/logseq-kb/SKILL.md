@@ -9,6 +9,7 @@ Use this Skill when the user's local Logseq graph is the relevant source of trut
 
 Prefer `logseq-cli ... --json` over scanning raw Logseq files. Keep retrieval small and targeted.
 If the user uses acronyms or shorthand such as `MBB`, rely on any configured alias groups from `logseq-cli` config automatically.
+Prefer answer-ready commands such as `cards build`, `recall topic`, `timeline topic`, `decisions list`, and `lessons list` before falling back to lower-level search or full document reads.
 
 ## Preconditions
 
@@ -26,6 +27,14 @@ logseq-cli graph use --graph /path/to/Logseq
 Use the narrowest command that matches the task.
 
 1. Aggregates first:
+   - `cards build project`
+   - `cards build topic`
+   - `cards build tag`
+   - `cards build decision`
+   - `cards build lesson`
+   - `cards build weekly`
+   - `recall topic`
+   - `timeline topic`
    - `summarize project`
    - `summarize topic`
    - `summarize daily`
@@ -45,6 +54,26 @@ Use the narrowest command that matches the task.
 
 If an aggregate or search result already answers the question, stop there.
 
+## Preferred Workflows
+
+Use these patterns by default:
+
+1. Project question:
+   - Start with `cards build project`
+   - If needed, add `decisions list <project>` or `lessons list <project>`
+2. Topic or tag question:
+   - Start with `cards build topic` or `cards build tag`
+   - If the user asks how the topic evolved, add `timeline topic`
+3. "Why did we do this?" question:
+   - Start with `cards build decision`
+   - If needed, add `decisions list`
+4. "What did we learn?" question:
+   - Start with `cards build lesson`
+   - If needed, add `lessons list`
+5. Weekly review / planning:
+   - Start with `cards build weekly`
+   - If needed, add `tasks list`
+
 ## Reading Workflow
 
 For questions like:
@@ -55,10 +84,12 @@ For questions like:
 - "What are my open follow-ups?"
 - "Why did I choose this approach before?"
 - "What did I learn from this before?"
+- "What should I remember next time?"
+- "Can you build me a weekly brief from my journals?"
 
 do this:
 
-1. Run one or two targeted `summarize` or `search` commands.
+1. Run one or two targeted `cards build`, `recall`, `timeline`, `decisions list`, or `lessons list` commands.
 2. Pull at most one or two supporting reads with `page read` or `journal read` only if needed.
 3. Answer with:
    - facts from Logseq

@@ -19,8 +19,11 @@
   - [logseq-status.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-status.md)
   - [logseq-kb.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-kb.md)
   - [logseq-daily.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-daily.md)
+  - [logseq-weekly.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-weekly.md)
   - [logseq-project.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-project.md)
   - [logseq-topic.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-topic.md)
+  - [logseq-decisions.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-decisions.md)
+  - [logseq-lessons.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-lessons.md)
   - [logseq-capture.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-capture.md)
   - [logseq-next.md](/Users/yiyi/program/llm/logseq-cli/integrations/claude/commands/logseq-next.md)
 - 安装脚本:
@@ -59,10 +62,16 @@ What Skills are available?
   - 拉取某个主题或项目的定向上下文
 - `/logseq-daily [YYYY-MM-DD]`
   - 生成日报和当前重点
+- `/logseq-weekly [YYYY-MM-DD]`
+  - 生成周视角卡片和 weekly brief
 - `/logseq-project <project>`
   - 生成项目简报
 - `/logseq-topic <topic>`
   - 汇总某个主题、tag 或 recurring pattern
+- `/logseq-decisions <topic>`
+  - 提取决策和原因
+- `/logseq-lessons <topic>`
+  - 提取经验、踩坑和最佳实践
 - `/logseq-capture <note>`
   - 把结论或任务保守地写回 Logseq
 - `/logseq-next [YYYY-MM-DD]`

@@ -5,6 +5,7 @@ from typing import Annotated
 
 import typer
 
+from logseq_cli.core.decisions import list_decisions
 from logseq_cli.core.cards import build_project_card, build_tag_card, build_topic_card
 from logseq_cli.core.capture import capture_project, capture_task
 from logseq_cli.core.config import get_config_path, set_default_graph_path
@@ -33,6 +34,7 @@ recall_app = typer.Typer(no_args_is_help=True)
 timeline_app = typer.Typer(no_args_is_help=True)
 cards_app = typer.Typer(no_args_is_help=True)
 cards_build_app = typer.Typer(no_args_is_help=True)
+decisions_app = typer.Typer(no_args_is_help=True)
 
 app.add_typer(graph_app, name="graph")
 app.add_typer(page_app, name="page")
@@ -45,6 +47,7 @@ app.add_typer(summarize_app, name="summarize")
 app.add_typer(recall_app, name="recall")
 app.add_typer(timeline_app, name="timeline")
 app.add_typer(cards_app, name="cards")
+app.add_typer(decisions_app, name="decisions")
 cards_app.add_typer(cards_build_app, name="build")
 
 GraphOption = Annotated[Path | None, typer.Option("--graph", help="Path to the graph root.")]
@@ -1018,3 +1021,46 @@ def cards_build_project_command(
     elif not quiet:
         typer.echo(data["title"])
         typer.echo(data["summary"])
+
+
+@decisions_app.command("list")
+def decisions_list_command(
+    query: Annotated[str | None, typer.Argument(help="Optional topic, tag, or text filter.")] = None,
+    graph: GraphOption = None,
+    json_output: JsonOption = False,
+    scope: Annotated[str, typer.Option("--scope", help="Comma-separated scopes: pages,journals")] = "pages,journals",
+    since: Annotated[str | None, typer.Option("--since", help="Include journals on or after YYYY-MM-DD.")] = None,
+    until: Annotated[str | None, typer.Option("--until", help="Include journals on or before YYYY-MM-DD.")] = None,
+    limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum number of decisions to return.")] = 20,
+    quiet: QuietOption = False,
+) -> None:
+    command = "decisions list"
+    resolved_graph = None
+    try:
+        resolved_graph = resolve_graph(graph)
+        since_date, until_date = parse_date_window(since=since, until=until)
+        data = list_decisions(
+            resolved_graph,
+            query=query,
+            scope=scope,
+            since=since_date,
+            until=until_date,
+            limit=limit,
+        )
+    except ValueError as error:
+        emit_failure(
+            command,
+            resolved_graph,
+            LogseqCliError(code="INVALID_DATE_RANGE", message=str(error), exit_code=2),
+            json_output,
+        )
+        return
+    except LogseqCliError as error:
+        emit_failure(command, resolved_graph, error, json_output)
+        return
+
+    if json_output:
+        emit_json(make_success(command, resolved_graph, data))
+    elif not quiet:
+        for item in data["decisions"]:
+            typer.echo(f"{item['title']}:{item['line_no']} {item['text']}")

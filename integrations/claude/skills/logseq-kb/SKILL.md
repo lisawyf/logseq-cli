@@ -30,6 +30,7 @@ Use the narrowest command that matches the task.
    - `summarize daily`
    - `summarize weekly`
    - `journal summarize`
+   - `decisions list`
 2. Open work:
    - `tasks list`
 3. Search:
@@ -50,6 +51,7 @@ For questions like:
 - "What do I already know about Project Alpha?"
 - "Have I dealt with this ops problem before?"
 - "What are my open follow-ups?"
+- "Why did I choose this approach before?"
 
 do this:
 
@@ -93,4 +95,3 @@ Do not rewrite large pages or journals unless the user explicitly asks.
 ## References
 
 - For command mapping and examples, read [references/commands.md](references/commands.md).
-

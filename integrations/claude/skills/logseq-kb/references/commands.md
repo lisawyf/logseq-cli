@@ -90,6 +90,20 @@ logseq-cli journal read --date 2026-04-05 --json
 logseq-cli tasks list --state todo,doing,now,waiting,later --json
 ```
 
+## Decisions And Rationale
+
+- Decision records for a topic:
+
+```bash
+logseq-cli decisions list "MBB" --json
+```
+
+- Decision records in a date window:
+
+```bash
+logseq-cli decisions list "OpenClaw" --since 2026-01-01 --until 2026-04-01 --json
+```
+
 ## Safe Write-Back
 
 - Quick note into today's journal:

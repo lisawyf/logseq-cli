@@ -26,6 +26,7 @@ The current CLI implements these commands:
 - `capture quick`
 - `capture project`
 - `capture task`
+- `decisions list`
 - `cards build project`
 - `cards build topic`
 - `cards build tag`
@@ -280,6 +281,12 @@ Build a project knowledge card:
 logseq-cli cards build project "OpenClaw" --graph ~/Documents/Logseq --json
 ```
 
+List decision records and extracted reasons:
+
+```bash
+logseq-cli decisions list "MBB" --graph ~/Documents/Logseq --since 2026-01-01 --json
+```
+
 ## Graph Resolution
 
 Graph discovery order:
@@ -370,6 +377,7 @@ Stable exit codes:
 - Topic timeline focuses on journal history and returns chronologically ordered entries for a topic or tag.
 - Knowledge cards compress recall output into summary, key points, open tasks, and evidence that Claude Code can reuse directly.
 - Project cards combine the project page, related references, open tasks, related links, and compact evidence for project-oriented Q&A.
+- Decision extraction uses local heuristics to pull likely decisions plus inline or child-block reason snippets across pages and journals.
 
 ## Known Limitations
 

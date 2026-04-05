@@ -737,6 +737,77 @@ def test_cards_build_project_respects_journal_date_window(runner, tmp_path: Path
     assert len(payload["data"]["evidence"]) == 3
 
 
+def test_decisions_list_json_extracts_reasons(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "pages" / "Architecture.md").write_text(
+        "# Architecture\n\n- Decided to switch to Postgres because SQLite could not handle concurrent writes\n  - Reason: we need better write concurrency\n",
+        encoding="utf-8",
+    )
+    (graph / "journals" / "2026_04_05.md").write_text(
+        "- 我们决定改用 Redis 作为缓存层，因为这样可以减少重复查询\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["decisions", "list", "--graph", str(graph), "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["command"] == "decisions list"
+    assert payload["data"]["count"] == 2
+    assert payload["data"]["returned_count"] == 2
+    assert payload["data"]["decisions"][0]["reason_count"] >= 1
+    assert "better write concurrency" in "\n".join(payload["data"]["decisions"][1]["reason_snippets"] + payload["data"]["decisions"][0]["reason_snippets"])
+
+
+def test_decisions_list_query_and_date_window(runner, tmp_path: Path) -> None:
+    graph = tmp_path / "graph"
+    (graph / "pages").mkdir(parents=True)
+    (graph / "journals").mkdir()
+    (graph / "logseq").mkdir()
+    (graph / "logseq" / "config.edn").write_text("{}", encoding="utf-8")
+    (graph / "journals" / "2026_04_01.md").write_text("- Decided to use MBB scoring\n", encoding="utf-8")
+    (graph / "journals" / "2026_04_06.md").write_text("- Final decision: keep the MBB checklist because it improves review quality\n", encoding="utf-8")
+    (graph / "pages" / "MBB.md").write_text("# MBB\n- Decided to standardize on MBB tags\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "decisions",
+            "list",
+            "MBB",
+            "--graph",
+            str(graph),
+            "--since",
+            "2026-04-05",
+            "--json",
+        ],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 0
+    assert payload["data"]["count"] == 2
+    assert payload["data"]["decisions"][0]["journal_date"] == "2026-04-06"
+
+
+def test_decisions_list_invalid_scope(runner, fixture_graph: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["decisions", "list", "--graph", str(fixture_graph), "--scope", "invalid", "--json"],
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.exit_code == 2
+    assert payload["ok"] is False
+    assert payload["errors"][0]["code"] == "INVALID_SCOPE"
+
+
 def test_search_text_json(runner, fixture_graph: Path) -> None:
     result = runner.invoke(
         app,

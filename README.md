@@ -85,6 +85,14 @@ pytest
 python3 -m build --sdist --wheel
 ```
 
+Or use the release helper script:
+
+```bash
+./scripts/release.sh all
+```
+
+This runs tests, a few JSON smoke checks, and builds local release artifacts into `dist/`.
+
 ## Usage
 
 Detect a graph:
@@ -193,6 +201,12 @@ Search tags:
 
 ```bash
 logseq-cli search tags "ops" --graph ~/Documents/Logseq --json
+```
+
+Build local release artifacts:
+
+```bash
+./scripts/release.sh build
 ```
 
 Suppress human-readable output:

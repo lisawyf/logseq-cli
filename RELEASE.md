@@ -2,6 +2,14 @@
 
 This project is currently prepared for an initial `0.1.0` local release.
 
+Preferred local release flow:
+
+```bash
+./scripts/release.sh all
+```
+
+This runs checks, smoke tests, and builds release artifacts into `dist/`.
+
 ## Pre-release checks
 
 Run these before publishing:
@@ -10,6 +18,14 @@ Run these before publishing:
 pytest
 logseq-cli --help
 python3 -m build --sdist --wheel
+```
+
+Equivalent scripted commands:
+
+```bash
+./scripts/release.sh check
+./scripts/release.sh smoke
+./scripts/release.sh build
 ```
 
 If isolated build environments cannot reach package indexes in your local setup, use:
